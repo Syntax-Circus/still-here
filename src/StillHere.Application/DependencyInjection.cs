@@ -19,6 +19,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAddManagedDomainRequestHandler, AddManagedDomainRequestHandler>();
         services.AddScoped<IUpdateManagedDomainRequestHandler, UpdateManagedDomainRequestHandler>();
+        services.AddScoped<IDeleteManagedDomainRequestHandler, DeleteManagedDomainRequestHandler>();
 
         return services;
     }
