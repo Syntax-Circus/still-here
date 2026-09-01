@@ -38,6 +38,7 @@ public static class DependencyInjection
 
         services.AddScoped<IManagedDomainRepository, ManagedDomainRepository>();
         services.AddSingleton<ICredentialProtector, CredentialProtector>();
+        services.AddSingleton<ISmtpCredentialProtector, SmtpCredentialProtector>();
         services.AddScoped<IGlobalSettingsReader, GlobalSettingsReader>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();

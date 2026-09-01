@@ -236,3 +236,44 @@ Not a boundary-pattern deviation — still satisfies `APPLICATION_ARCHITECTURE.m
 
 - **Approved by:** Project owner
 - **Approved on:** 2026-09-01
+
+---
+
+## Decision 7: Separate SMTP Credential Protector
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [02-ARCHITECTURE.md](02-ARCHITECTURE.md), [PHASE-08-notifications.md](PHASE-08-notifications.md), Decision 4
+
+### Context
+
+Phase 08 (Notifications) requires a second credential-encryption abstraction for protecting SMTP passwords, used by the email notification sender. Decision 4 established `ICredentialProtector` for DNS provider credentials using the purpose string `"StillHere.DnsProviderCredentials"`. Phase 08 now needs to protect SMTP passwords with cryptographic isolation from DNS credentials — separate purpose strings guarantee that a key compromise for one category does not expose the other.
+
+### Decision
+
+Create a second, parallel narrow interface `ISmtpCredentialProtector` (`Protect`/`Unprotect` methods) backed by `Microsoft.AspNetCore.DataProtection` with the purpose string `"StillHere.SmtpCredentials"`. This mirrors `ICredentialProtector`'s implementation pattern exactly, with only the purpose string differing. Register both as singletons in DependencyInjection.cs.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — `ISmtpCredentialProtector` lives in `StillHere.Application` with its implementation in `StillHere.Infrastructure`, matching the mandatory abstraction/implementation split. This extends Decision 4's credential-protection pattern to a second secret category; no architectural deviation is involved.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Application/Security/ISmtpCredentialProtector.cs` (interface), `src/StillHere.Infrastructure/Security/SmtpCredentialProtector.cs` (implementation), tests, and DI registration in `DependencyInjection.cs`.
+- **Consequences:** Two narrow interfaces instead of one parameterized `Protect(purpose, plaintext)` method, consistent with this codebase's established anti-generic-abstraction stance (see the handler-per-use-case pattern in Decision 3 and throughout `02-ARCHITECTURE.md`).
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent; future credential categories (e.g. API keys, other secrets) would follow the same pattern, each with its own narrow interface and purpose string.
+
+### Alternatives Considered
+
+- A single parameterized interface (`Protect(purpose, plaintext)`) shared by both DNS and SMTP credentials — rejected: adds a generic method parameter where the codebase convention is narrow, single-purpose interfaces (see Decision 3's handler-per-use-case rationale); the per-category interface approach is consistent with the established anti-generic-abstraction stance.
+
+### Consequences
+
+- Positive: cryptographic isolation of SMTP passwords from DNS credentials; consistency with the handler-per-use-case pattern established in Decision 3; simple, mechanical implementation (no new concepts or dependencies).
+- Negative: two classes instead of one parameterized class; slightly higher boilerplate in DependencyInjection.cs.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01
