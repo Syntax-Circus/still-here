@@ -48,6 +48,7 @@ public static class DependencyInjection
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
             .AddTypedClient<IDnsProvider, NamecheapDnsProvider>();
 
+        services.AddSingleton<IpDetectionCache>();
         services.AddScoped<IIpDetectionService, IpDetectionService>();
 
         services.AddResilientHttpClient(

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using StillHere.Application;
 using StillHere.Application.IpDetection;
+using StillHere.Infrastructure.IpDetection;
 using Xunit;
 
 namespace StillHere.Infrastructure.Tests.IpDetection;
@@ -11,6 +12,27 @@ public sealed class IpDetectionDependencyInjectionTests
 {
     [Fact]
     public void AddInfrastructureAndAddApplication_ResolvesIIpDetectionService()
+    {
+        using var provider = BuildProvider();
+        var ipDetection = provider.GetRequiredService<IIpDetectionService>();
+
+        ipDetection.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersIpDetectionCacheAsSingleton()
+    {
+        using var provider = BuildProvider();
+
+        using var scopeOne = provider.CreateScope();
+        using var scopeTwo = provider.CreateScope();
+        var cacheFromScopeOne = scopeOne.ServiceProvider.GetRequiredService<IpDetectionCache>();
+        var cacheFromScopeTwo = scopeTwo.ServiceProvider.GetRequiredService<IpDetectionCache>();
+
+        cacheFromScopeOne.ShouldBeSameAs(cacheFromScopeTwo);
+    }
+
+    private static ServiceProvider BuildProvider()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -24,9 +46,6 @@ public sealed class IpDetectionDependencyInjectionTests
         services.AddInfrastructure(configuration);
         services.AddApplication();
 
-        using var provider = services.BuildServiceProvider();
-        var ipDetection = provider.GetRequiredService<IIpDetectionService>();
-
-        ipDetection.ShouldNotBeNull();
+        return services.BuildServiceProvider();
     }
 }

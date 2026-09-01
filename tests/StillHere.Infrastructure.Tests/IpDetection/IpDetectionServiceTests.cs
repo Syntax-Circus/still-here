@@ -159,7 +159,7 @@ public sealed class IpDetectionServiceTests : IDisposable
     }
 
     private IpDetectionService CreateService(HttpMessageHandler handler) =>
-        new(new StubHttpClientFactory(handler), _db);
+        new(new StubHttpClientFactory(handler), _db, new IpDetectionCache());
 
     private static HttpResponseMessage TextResponse(string body) =>
         new(HttpStatusCode.OK) { Content = new ByteArrayContent(Encoding.UTF8.GetBytes(body)) };

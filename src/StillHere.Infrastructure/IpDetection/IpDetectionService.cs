@@ -10,12 +10,13 @@ namespace StillHere.Infrastructure.IpDetection;
 
 internal sealed class IpDetectionService(
     IHttpClientFactory httpClientFactory,
-    AppDbContext db) : IIpDetectionService
+    AppDbContext db,
+    IpDetectionCache cache) : IIpDetectionService
 {
     internal const string IpCheckHttpClientName = "ip-check";
 
     public Task<IpDetectionResult> DetectCurrentIpAsync(CancellationToken cancellationToken) =>
-        DetectWithoutCacheAsync(cancellationToken);
+        cache.GetOrDetectAsync(() => DetectWithoutCacheAsync(cancellationToken), cancellationToken);
 
     private async Task<IpDetectionResult> DetectWithoutCacheAsync(CancellationToken cancellationToken)
     {
