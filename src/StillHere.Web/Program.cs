@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using StillHere.Application;
 using StillHere.Infrastructure;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Web.Components;
+using StillHere.Web.Features.Auth;
 using SyntaxCircus.AspNetCore.Serilog;
 using SyntaxCircus.Common;
 using SyntaxCircus.DotEnv;
@@ -29,11 +32,29 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddCurrentUserService();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(
         builder.Configuration["DataProtection:KeysPath"]
             ?? Path.Combine(builder.Environment.ContentRootPath, "keys")));
+
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "stillhere.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        // still-here may be reached over plain HTTP on a LAN or behind a reverse proxy that
+        // terminates TLS -- SameAsRequest (not Always) accommodates both without breaking either.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromDays(14);
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/login";
+    });
 
 var app = builder.Build();
 
@@ -49,12 +70,21 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+// Runs before authentication so a fresh install redirects straight to /setup rather than
+// bouncing through the cookie scheme's own LoginPath challenge first.
+app.UseFirstRunGate();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapGet("/healthz", async (AppDbContext dbContext, CancellationToken cancellationToken) =>
     await dbContext.Database.CanConnectAsync(cancellationToken)
         ? Results.Ok()
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
+
+app.MapAuthEndpoints();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

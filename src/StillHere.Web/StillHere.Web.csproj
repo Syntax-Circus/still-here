@@ -20,4 +20,8 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="StillHere.Web.Tests" />
+  </ItemGroup>
+
 </Project>

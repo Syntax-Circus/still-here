@@ -1,0 +1,26 @@
+@page "/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
+<PageTitle>Sign in - still-here</PageTitle>
+
+<div class="auth-page">
+    <h1>Sign in</h1>
+
+    @if (_viewModel.ErrorMessage is not null)
+    {
+        <p class="auth-error" role="alert">@_viewModel.ErrorMessage</p>
+    }
+
+    <form method="post" action="/login">
+        <AntiforgeryToken />
+        <input type="hidden" name="returnUrl" value="@_viewModel.ReturnUrl" />
+
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+        <button type="submit">Sign in</button>
+    </form>
+</div>

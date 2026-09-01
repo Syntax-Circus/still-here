@@ -1,0 +1,29 @@
+@page "/setup"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
+<PageTitle>Set up still-here</PageTitle>
+
+<div class="auth-page">
+    <h1>Create the admin account</h1>
+    <p>This is a one-time setup step &mdash; still-here supports a single admin account.</p>
+
+    @if (_viewModel.ErrorMessage is not null)
+    {
+        <p class="auth-error" role="alert">@_viewModel.ErrorMessage</p>
+    }
+
+    <form method="post" action="/setup">
+        <AntiforgeryToken />
+
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" />
+
+        <label for="confirmPassword">Confirm password</label>
+        <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" />
+
+        <button type="submit">Create account</button>
+    </form>
+</div>
