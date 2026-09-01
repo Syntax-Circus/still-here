@@ -7,6 +7,9 @@ keys/
 !.env.example
 .env.local
 
+# AspNetCore.SassCompiler output -- compiled at build time from wwwroot/scss
+src/StillHere.Web/wwwroot/css/
+
 # Claude Code local settings
 .claude/settings.local.json
 

@@ -10,6 +10,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="AspNetCore.SassCompiler" />
     <PackageReference Include="SyntaxCircus.AspNetCore.Serilog" />
     <PackageReference Include="SyntaxCircus.Blazor.Components" />
     <PackageReference Include="SyntaxCircus.Common" />

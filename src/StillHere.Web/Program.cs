@@ -1,3 +1,4 @@
+using AspNetCore.SassCompiler;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,8 @@ builder.AddStandardSerilog(configureFileLogging: options =>
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSassCompiler();
 
 builder.Services.AddCurrentUserService();
 builder.Services.AddInfrastructure(builder.Configuration);
