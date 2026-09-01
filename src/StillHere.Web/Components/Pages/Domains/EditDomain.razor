@@ -14,7 +14,7 @@ else
 
     @if (_errorMessages.Count > 0)
     {
-        <ul class="form-errors" role="alert">
+        <ul class="alert alert-danger form-errors" role="alert">
             @foreach (var message in _errorMessages)
             {
                 <li>@message</li>
@@ -23,32 +23,40 @@ else
     }
 
     <EditForm Model="_viewModel" OnValidSubmit="HandleSubmitAsync">
-        <label for="domainName">Domain name</label>
-        <InputText id="domainName" @bind-Value="_viewModel.DomainName" />
+        <div class="mb-3">
+            <label class="form-label" for="domainName">Domain name</label>
+            <InputText id="domainName" class="form-control" @bind-Value="_viewModel.DomainName" />
+        </div>
 
-        <label for="host">Host</label>
-        <InputText id="host" @bind-Value="_viewModel.Host" />
+        <div class="mb-3">
+            <label class="form-label" for="host">Host</label>
+            <InputText id="host" class="form-control" @bind-Value="_viewModel.Host" />
+        </div>
 
-        <p>DNS provider: @_providerDisplayName (fixed once a domain is added)</p>
+        <p class="text-muted">DNS provider: @_providerDisplayName (fixed once a domain is added)</p>
 
         @foreach (var field in _credentialFields)
         {
             @* Plain HTML input, not <InputText>: see AddDomain.razor for why. *@
-            <label for="@($"credential-{field.Key}")">@field.Label (leave blank to keep the current value)</label>
-            <input id="@($"credential-{field.Key}")" type="@(field.IsSecret ? "password" : "text")"
-                   @bind="_viewModel.CredentialSecrets[field.Key]" />
+            <div class="mb-3">
+                <label class="form-label" for="@($"credential-{field.Key}")">@field.Label (leave blank to keep the current value)</label>
+                <input id="@($"credential-{field.Key}")" class="form-control" type="@(field.IsSecret ? "password" : "text")"
+                       @bind="_viewModel.CredentialSecrets[field.Key]" />
+            </div>
         }
 
-        <label for="pollingInterval">Polling interval override (seconds, optional)</label>
-        <InputNumber id="pollingInterval" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+        <div class="mb-3">
+            <label class="form-label" for="pollingInterval">Polling interval override (seconds, optional)</label>
+            <InputNumber id="pollingInterval" class="form-control" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+        </div>
 
-        <label for="enabled">
-            <InputCheckbox id="enabled" @bind-Value="_viewModel.Enabled" />
-            Enabled
-        </label>
+        <div class="form-check mb-3">
+            <InputCheckbox id="enabled" class="form-check-input" @bind-Value="_viewModel.Enabled" />
+            <label class="form-check-label" for="enabled">Enabled</label>
+        </div>
 
-        <button type="submit" disabled="@_isSubmitting">Save</button>
-        <a href="/">Cancel</a>
+        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">Save</button>
+        <a class="btn btn-outline-secondary" href="/">Cancel</a>
     </EditForm>
 
     <hr />
@@ -56,11 +64,11 @@ else
     @if (_confirmingDelete)
     {
         <p>Delete this domain? This cannot be undone.</p>
-        <button type="button" @onclick="HandleDeleteAsync">Confirm delete</button>
-        <button type="button" @onclick="() => _confirmingDelete = false">Cancel</button>
+        <button type="button" class="btn btn-danger" @onclick="HandleDeleteAsync">Confirm delete</button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="() => _confirmingDelete = false">Cancel</button>
     }
     else
     {
-        <button type="button" @onclick="() => _confirmingDelete = true">Delete domain</button>
+        <button type="button" class="btn btn-outline-danger" @onclick="() => _confirmingDelete = true">Delete domain</button>
     }
 }

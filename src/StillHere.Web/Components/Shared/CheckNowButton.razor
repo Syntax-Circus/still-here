@@ -1,0 +1,11 @@
+<button type="button" class="btn btn-sm btn-outline-primary" disabled="@IsChecking" @onclick="OnCheckNow">
+    @(IsChecking ? "Checking…" : "Check now")
+</button>
+
+@code {
+    [Parameter]
+    public bool IsChecking { get; set; }
+
+    [Parameter]
+    public EventCallback OnCheckNow { get; set; }
+}

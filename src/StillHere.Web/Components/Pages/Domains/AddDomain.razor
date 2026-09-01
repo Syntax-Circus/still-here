@@ -7,7 +7,7 @@
 
 @if (_errorMessages.Count > 0)
 {
-    <ul class="form-errors" role="alert">
+    <ul class="alert alert-danger form-errors" role="alert">
         @foreach (var message in _errorMessages)
         {
             <li>@message</li>
@@ -16,34 +16,44 @@
 }
 
 <EditForm Model="_viewModel" OnValidSubmit="HandleSubmitAsync">
-    <label for="domainName">Domain name</label>
-    <InputText id="domainName" @bind-Value="_viewModel.DomainName" />
+    <div class="mb-3">
+        <label class="form-label" for="domainName">Domain name</label>
+        <InputText id="domainName" class="form-control" @bind-Value="_viewModel.DomainName" />
+    </div>
 
-    <label for="host">Host</label>
-    <InputText id="host" @bind-Value="_viewModel.Host" />
-    <p class="field-hint">Use "@@" for the bare domain, a subdomain name, or "*" for a wildcard.</p>
+    <div class="mb-3">
+        <label class="form-label" for="host">Host</label>
+        <InputText id="host" class="form-control" @bind-Value="_viewModel.Host" />
+        <p class="form-text field-hint">Use "@@" for the bare domain, a subdomain name, or "*" for a wildcard.</p>
+    </div>
 
-    <label for="providerKey">DNS provider</label>
-    <InputSelect id="providerKey" @bind-Value="_viewModel.ProviderKey" @bind-Value:after="OnProviderChanged">
-        @foreach (var provider in _providers)
-        {
-            <option value="@provider.ProviderKey">@provider.DisplayName</option>
-        }
-    </InputSelect>
+    <div class="mb-3">
+        <label class="form-label" for="providerKey">DNS provider</label>
+        <InputSelect id="providerKey" class="form-select" @bind-Value="_viewModel.ProviderKey" @bind-Value:after="OnProviderChanged">
+            @foreach (var provider in _providers)
+            {
+                <option value="@provider.ProviderKey">@provider.DisplayName</option>
+            }
+        </InputSelect>
+    </div>
 
     @foreach (var field in _credentialFields)
     {
         @* Plain HTML input, not <InputText>: InputBase<T>'s @bind-Value can't bind a dictionary
            indexer (FieldIdentifier.Create can't parse that expression shape). Native-element @bind
            is pure Razor-compiler sugar and doesn't go through that machinery. *@
-        <label for="@($"credential-{field.Key}")">@field.Label</label>
-        <input id="@($"credential-{field.Key}")" type="@(field.IsSecret ? "password" : "text")"
-               @bind="_viewModel.CredentialSecrets[field.Key]" />
+        <div class="mb-3">
+            <label class="form-label" for="@($"credential-{field.Key}")">@field.Label</label>
+            <input id="@($"credential-{field.Key}")" class="form-control" type="@(field.IsSecret ? "password" : "text")"
+                   @bind="_viewModel.CredentialSecrets[field.Key]" />
+        </div>
     }
 
-    <label for="pollingInterval">Polling interval override (seconds, optional)</label>
-    <InputNumber id="pollingInterval" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+    <div class="mb-3">
+        <label class="form-label" for="pollingInterval">Polling interval override (seconds, optional)</label>
+        <InputNumber id="pollingInterval" class="form-control" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+    </div>
 
-    <button type="submit" disabled="@_isSubmitting">Add domain</button>
-    <a href="/">Cancel</a>
+    <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">Add domain</button>
+    <a class="btn btn-outline-secondary" href="/">Cancel</a>
 </EditForm>

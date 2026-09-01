@@ -3,24 +3,28 @@
 
 <PageTitle>Sign in - still-here</PageTitle>
 
-<div class="auth-page">
+<div class="auth-page container" style="max-width: 24rem;">
     <h1>Sign in</h1>
 
     @if (_viewModel.ErrorMessage is not null)
     {
-        <p class="auth-error" role="alert">@_viewModel.ErrorMessage</p>
+        <p class="alert alert-danger auth-error" role="alert">@_viewModel.ErrorMessage</p>
     }
 
     <form method="post" action="/login">
         <AntiforgeryToken />
         <input type="hidden" name="returnUrl" value="@_viewModel.ReturnUrl" />
 
-        <label for="username">Username</label>
-        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+        <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <input id="username" name="username" type="text" class="form-control" autocomplete="username" required autofocus />
+        </div>
 
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input id="password" name="password" type="password" class="form-control" autocomplete="current-password" required />
+        </div>
 
-        <button type="submit">Sign in</button>
+        <button type="submit" class="btn btn-primary">Sign in</button>
     </form>
 </div>

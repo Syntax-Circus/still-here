@@ -3,27 +3,33 @@
 
 <PageTitle>Set up still-here</PageTitle>
 
-<div class="auth-page">
+<div class="auth-page container" style="max-width: 24rem;">
     <h1>Create the admin account</h1>
-    <p>This is a one-time setup step &mdash; still-here supports a single admin account.</p>
+    <p class="text-muted">This is a one-time setup step &mdash; still-here supports a single admin account.</p>
 
     @if (_viewModel.ErrorMessage is not null)
     {
-        <p class="auth-error" role="alert">@_viewModel.ErrorMessage</p>
+        <p class="alert alert-danger auth-error" role="alert">@_viewModel.ErrorMessage</p>
     }
 
     <form method="post" action="/setup">
         <AntiforgeryToken />
 
-        <label for="username">Username</label>
-        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+        <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <input id="username" name="username" type="text" class="form-control" autocomplete="username" required autofocus />
+        </div>
 
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" />
+        <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input id="password" name="password" type="password" class="form-control" autocomplete="new-password" required minlength="8" />
+        </div>
 
-        <label for="confirmPassword">Confirm password</label>
-        <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" />
+        <div class="mb-3">
+            <label class="form-label" for="confirmPassword">Confirm password</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" class="form-control" autocomplete="new-password" required minlength="8" />
+        </div>
 
-        <button type="submit">Create account</button>
+        <button type="submit" class="btn btn-primary">Create account</button>
     </form>
 </div>

@@ -1,0 +1,8 @@
+@using StillHere.Application.Features.Domains
+
+<span class="badge status-badge--@Status.ToString().ToLowerInvariant()">@Status</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public ManagedDomainStatus Status { get; set; }
+}
