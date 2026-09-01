@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
+using StillHere.Application.Features.DomainChecks;
 using StillHere.Application.Features.Domains;
 
 namespace StillHere.Application;
@@ -20,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<IAddManagedDomainRequestHandler, AddManagedDomainRequestHandler>();
         services.AddScoped<IUpdateManagedDomainRequestHandler, UpdateManagedDomainRequestHandler>();
         services.AddScoped<IDeleteManagedDomainRequestHandler, DeleteManagedDomainRequestHandler>();
+
+        services.AddScoped<IRunScheduledDomainCheckHandler, RunScheduledDomainCheckHandler>();
 
         return services;
     }
