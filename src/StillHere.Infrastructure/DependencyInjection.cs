@@ -8,6 +8,7 @@ using StillHere.Application.Features.AuditLog;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.Features.Notifications;
 using StillHere.Application.Features.Settings;
 using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddSingleton<IAdminPasswordHasher, AdminPasswordHasher>();
 
         services.AddScoped<IManagedDomainRepository, ManagedDomainRepository>();
+        services.AddScoped<INotificationChannelRepository, NotificationChannelRepository>();
         services.AddSingleton<ICredentialProtector, CredentialProtector>();
         services.AddSingleton<ISmtpCredentialProtector, SmtpCredentialProtector>();
         services.AddScoped<IGlobalSettingsReader, GlobalSettingsReader>();
