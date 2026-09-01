@@ -14,6 +14,7 @@
 | --- | --- |
 | Blazor pages/components | Thin presentation entry points; bind input, delegate to named handlers, render outcomes |
 | Named use-case handlers | Application logic per use case (see boundary table below) |
+| `IDnsProviderRegistry` | Resolves an `IDnsProvider` by `ProviderKey`; exposes `CredentialFields` for dynamic UI form generation (Phase 04) |
 | `IDnsProvider` implementations | Provider-specific update calls (Namecheap in v1) |
 | `IIpDetectionService` | External IP fallback chain + provider-reported IP comparison |
 | Scheduler (`BackgroundService`) | Ticks, selects due domains, invokes handlers |
