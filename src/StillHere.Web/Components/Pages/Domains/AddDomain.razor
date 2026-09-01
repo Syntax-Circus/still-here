@@ -1,0 +1,49 @@
+@page "/domains/add"
+@rendermode InteractiveServer
+
+<PageTitle>Add domain - still-here</PageTitle>
+
+<h1>Add domain</h1>
+
+@if (_errorMessages.Count > 0)
+{
+    <ul class="form-errors" role="alert">
+        @foreach (var message in _errorMessages)
+        {
+            <li>@message</li>
+        }
+    </ul>
+}
+
+<EditForm Model="_viewModel" OnValidSubmit="HandleSubmitAsync">
+    <label for="domainName">Domain name</label>
+    <InputText id="domainName" @bind-Value="_viewModel.DomainName" />
+
+    <label for="host">Host</label>
+    <InputText id="host" @bind-Value="_viewModel.Host" />
+    <p class="field-hint">Use "@@" for the bare domain, a subdomain name, or "*" for a wildcard.</p>
+
+    <label for="providerKey">DNS provider</label>
+    <InputSelect id="providerKey" @bind-Value="_viewModel.ProviderKey" @bind-Value:after="OnProviderChanged">
+        @foreach (var provider in _providers)
+        {
+            <option value="@provider.ProviderKey">@provider.DisplayName</option>
+        }
+    </InputSelect>
+
+    @foreach (var field in _credentialFields)
+    {
+        @* Plain HTML input, not <InputText>: InputBase<T>'s @bind-Value can't bind a dictionary
+           indexer (FieldIdentifier.Create can't parse that expression shape). Native-element @bind
+           is pure Razor-compiler sugar and doesn't go through that machinery. *@
+        <label for="@($"credential-{field.Key}")">@field.Label</label>
+        <input id="@($"credential-{field.Key}")" type="@(field.IsSecret ? "password" : "text")"
+               @bind="_viewModel.CredentialSecrets[field.Key]" />
+    }
+
+    <label for="pollingInterval">Polling interval override (seconds, optional)</label>
+    <InputNumber id="pollingInterval" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+
+    <button type="submit" disabled="@_isSubmitting">Add domain</button>
+    <a href="/">Cancel</a>
+</EditForm>

@@ -1,0 +1,66 @@
+@page "/domains/{Id:int}/edit"
+@rendermode InteractiveServer
+
+<PageTitle>Edit domain - still-here</PageTitle>
+
+@if (_notFound)
+{
+    <h1>Domain not found</h1>
+    <p><a href="/">Back home</a></p>
+}
+else
+{
+    <h1>Edit domain</h1>
+
+    @if (_errorMessages.Count > 0)
+    {
+        <ul class="form-errors" role="alert">
+            @foreach (var message in _errorMessages)
+            {
+                <li>@message</li>
+            }
+        </ul>
+    }
+
+    <EditForm Model="_viewModel" OnValidSubmit="HandleSubmitAsync">
+        <label for="domainName">Domain name</label>
+        <InputText id="domainName" @bind-Value="_viewModel.DomainName" />
+
+        <label for="host">Host</label>
+        <InputText id="host" @bind-Value="_viewModel.Host" />
+
+        <p>DNS provider: @_providerDisplayName (fixed once a domain is added)</p>
+
+        @foreach (var field in _credentialFields)
+        {
+            @* Plain HTML input, not <InputText>: see AddDomain.razor for why. *@
+            <label for="@($"credential-{field.Key}")">@field.Label (leave blank to keep the current value)</label>
+            <input id="@($"credential-{field.Key}")" type="@(field.IsSecret ? "password" : "text")"
+                   @bind="_viewModel.CredentialSecrets[field.Key]" />
+        }
+
+        <label for="pollingInterval">Polling interval override (seconds, optional)</label>
+        <InputNumber id="pollingInterval" @bind-Value="_viewModel.PollingIntervalOverrideSeconds" />
+
+        <label for="enabled">
+            <InputCheckbox id="enabled" @bind-Value="_viewModel.Enabled" />
+            Enabled
+        </label>
+
+        <button type="submit" disabled="@_isSubmitting">Save</button>
+        <a href="/">Cancel</a>
+    </EditForm>
+
+    <hr />
+
+    @if (_confirmingDelete)
+    {
+        <p>Delete this domain? This cannot be undone.</p>
+        <button type="button" @onclick="HandleDeleteAsync">Confirm delete</button>
+        <button type="button" @onclick="() => _confirmingDelete = false">Cancel</button>
+    }
+    else
+    {
+        <button type="button" @onclick="() => _confirmingDelete = true">Delete domain</button>
+    }
+}
