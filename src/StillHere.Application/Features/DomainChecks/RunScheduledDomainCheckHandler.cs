@@ -3,6 +3,7 @@ using System.Text.Json;
 using StillHere.Application.Features.AuditLog;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.Features.Notifications;
 using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
 
@@ -25,7 +26,8 @@ public sealed class RunScheduledDomainCheckHandler(
     IIpDetectionService ipDetection,
     IDnsProviderRegistry dnsProviders,
     ICredentialProtector credentialProtector,
-    IAuditLogWriter auditLog) : IRunScheduledDomainCheckHandler
+    IAuditLogWriter auditLog,
+    INotificationDispatcher dispatcher) : IRunScheduledDomainCheckHandler
 {
     public async Task<DomainCheckOutcomeDto> HandleAsync(int managedDomainId, CancellationToken cancellationToken)
     {
@@ -68,6 +70,10 @@ public sealed class RunScheduledDomainCheckHandler(
         await auditLog.WriteAsync(
             new WriteAuditLogEntryRequest(domain.Id, AuditEventKind.IpChanged, domain.LastKnownIp, currentIp, changeMessage, Success: true, nowUtc),
             cancellationToken);
+        await dispatcher.DispatchAsync(
+            NotificationTrigger.IpChange,
+            new NotificationEventContext(domain.DomainName, domain.LastKnownIp, currentIp, "IpChanged", changeMessage),
+            cancellationToken);
 
         DnsUpdateResult updateResult;
         try
@@ -94,6 +100,10 @@ public sealed class RunScheduledDomainCheckHandler(
             await auditLog.WriteAsync(
                 new WriteAuditLogEntryRequest(domain.Id, AuditEventKind.UpdateSucceeded, domain.LastKnownIp, currentIp, successMessage, Success: true, nowUtc),
                 cancellationToken);
+            await dispatcher.DispatchAsync(
+                NotificationTrigger.Success,
+                new NotificationEventContext(domain.DomainName, domain.LastKnownIp, currentIp, "UpdateSucceeded", successMessage),
+                cancellationToken);
             await managedDomains.RecordCheckResultAsync(domain.Id, DomainCheckOutcomeKind.Updated, currentIp, nowUtc, cancellationToken);
 
             return new DomainCheckOutcomeDto(domain.Id, DomainCheckOutcomeKind.Updated, domain.LastKnownIp, currentIp, successMessage, nowUtc);
@@ -101,6 +111,10 @@ public sealed class RunScheduledDomainCheckHandler(
 
         await auditLog.WriteAsync(
             new WriteAuditLogEntryRequest(domain.Id, AuditEventKind.UpdateFailed, domain.LastKnownIp, currentIp, updateResult.Message, Success: false, nowUtc),
+            cancellationToken);
+        await dispatcher.DispatchAsync(
+            NotificationTrigger.Failure,
+            new NotificationEventContext(domain.DomainName, domain.LastKnownIp, currentIp, "UpdateFailed", updateResult.Message),
             cancellationToken);
         await managedDomains.RecordCheckResultAsync(domain.Id, DomainCheckOutcomeKind.UpdateFailed, newLastKnownIp: null, nowUtc, cancellationToken);
 

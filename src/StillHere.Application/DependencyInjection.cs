@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ICreateNotificationChannelRequestHandler, CreateNotificationChannelRequestHandler>();
         services.AddScoped<IUpdateNotificationChannelRequestHandler, UpdateNotificationChannelRequestHandler>();
         services.AddScoped<IDeleteNotificationChannelRequestHandler, DeleteNotificationChannelRequestHandler>();
+        services.AddSingleton<INotificationSenderRegistry, NotificationSenderRegistry>();
 
         return services;
     }

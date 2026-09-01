@@ -6,6 +6,7 @@ using StillHere.Application.Features.AuditLog;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.DomainChecks;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.Features.Notifications;
 using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
 using Xunit;
@@ -19,12 +20,13 @@ public sealed class RunScheduledDomainCheckHandlerTests
     private readonly IDnsProviderRegistry _dnsProviders = Substitute.For<IDnsProviderRegistry>();
     private readonly ICredentialProtector _credentialProtector = Substitute.For<ICredentialProtector>();
     private readonly IAuditLogWriter _auditLog = Substitute.For<IAuditLogWriter>();
+    private readonly INotificationDispatcher _dispatcher = Substitute.For<INotificationDispatcher>();
     private readonly IDnsProvider _provider = Substitute.For<IDnsProvider>();
     private readonly RunScheduledDomainCheckHandler _handler;
 
     public RunScheduledDomainCheckHandlerTests()
     {
-        _handler = new RunScheduledDomainCheckHandler(_managedDomains, _ipDetection, _dnsProviders, _credentialProtector, _auditLog);
+        _handler = new RunScheduledDomainCheckHandler(_managedDomains, _ipDetection, _dnsProviders, _credentialProtector, _auditLog, _dispatcher);
 
         _dnsProviders.GetByKey("namecheap").Returns(_provider);
         _credentialProtector.Unprotect(Arg.Any<string>()).Returns("{}");
@@ -47,6 +49,7 @@ public sealed class RunScheduledDomainCheckHandlerTests
             Arg.Any<CancellationToken>());
         await _managedDomains.Received(1).RecordCheckResultAsync(1, DomainCheckOutcomeKind.Unchanged, null, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
         await _provider.DidNotReceive().UpdateAsync(Arg.Any<DnsUpdateRequest>(), Arg.Any<CancellationToken>());
+        await _dispatcher.DidNotReceive().DispatchAsync(Arg.Any<NotificationTrigger>(), Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -65,6 +68,8 @@ public sealed class RunScheduledDomainCheckHandlerTests
         await _auditLog.Received(1).WriteAsync(Arg.Is<WriteAuditLogEntryRequest>(r => r.EventType == AuditEventKind.IpChanged), Arg.Any<CancellationToken>());
         await _auditLog.Received(1).WriteAsync(Arg.Is<WriteAuditLogEntryRequest>(r => r.EventType == AuditEventKind.UpdateSucceeded), Arg.Any<CancellationToken>());
         await _managedDomains.Received(1).RecordCheckResultAsync(1, DomainCheckOutcomeKind.Updated, "9.9.9.9", Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.IpChange, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.Success, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -81,6 +86,8 @@ public sealed class RunScheduledDomainCheckHandlerTests
         outcome.Kind.ShouldBe(DomainCheckOutcomeKind.Updated);
         outcome.OldIp.ShouldBe("1.1.1.1");
         outcome.NewIp.ShouldBe("2.2.2.2");
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.IpChange, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.Success, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -97,6 +104,8 @@ public sealed class RunScheduledDomainCheckHandlerTests
         await _auditLog.Received(1).WriteAsync(Arg.Is<WriteAuditLogEntryRequest>(r => r.EventType == AuditEventKind.IpChanged), Arg.Any<CancellationToken>());
         await _auditLog.Received(1).WriteAsync(Arg.Is<WriteAuditLogEntryRequest>(r => r.EventType == AuditEventKind.UpdateFailed && !r.Success), Arg.Any<CancellationToken>());
         await _managedDomains.Received(1).RecordCheckResultAsync(1, DomainCheckOutcomeKind.UpdateFailed, null, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.IpChange, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
+        await _dispatcher.Received(1).DispatchAsync(NotificationTrigger.Failure, Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -112,6 +121,7 @@ public sealed class RunScheduledDomainCheckHandlerTests
         await _managedDomains.Received(1).RecordCheckResultAsync(1, DomainCheckOutcomeKind.DetectionFailed, null, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
         _dnsProviders.DidNotReceive().GetByKey(Arg.Any<string>());
         await _provider.DidNotReceive().UpdateAsync(Arg.Any<DnsUpdateRequest>(), Arg.Any<CancellationToken>());
+        await _dispatcher.DidNotReceive().DispatchAsync(Arg.Any<NotificationTrigger>(), Arg.Any<NotificationEventContext>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

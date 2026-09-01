@@ -82,7 +82,14 @@ public static class DependencyInjection
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
             .AddTypedClient<INotificationSender, WebhookNotificationSender>();
 
-        services.AddScoped<INotificationSender, EmailNotificationSender>();
+        // Transient (not Scoped) -- INotificationSenderRegistry is a Singleton (mirrors
+        // IDnsProviderRegistry) and consumes IEnumerable<INotificationSender> at construction, so
+        // every INotificationSender implementation must be safe to capture that way.
+        // WebhookNotificationSender is already Transient via AddTypedClient's own convention;
+        // EmailNotificationSender holds no scoped state either (its dependencies are singletons),
+        // so it matches here rather than being the odd one out.
+        services.AddTransient<INotificationSender, EmailNotificationSender>();
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
         // Makes ILogger<T> resolvable even from a bare ServiceCollection in DI tests -- real
         // Program.cs's WebApplicationBuilder already provides this implicitly. First place in the
