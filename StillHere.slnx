@@ -8,5 +8,6 @@
     <Project Path="tests/StillHere.Application.Tests/StillHere.Application.Tests.csproj" />
     <Project Path="tests/StillHere.Architecture.Tests/StillHere.Architecture.Tests.csproj" />
     <Project Path="tests/StillHere.Infrastructure.Tests/StillHere.Infrastructure.Tests.csproj" />
+    <Project Path="tests/StillHere.Web.Tests/StillHere.Web.Tests.csproj" />
   </Folder>
 </Solution>
