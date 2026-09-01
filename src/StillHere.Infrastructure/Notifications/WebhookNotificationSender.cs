@@ -23,17 +23,22 @@ internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotifi
         ArgumentNullException.ThrowIfNull(channel);
         ArgumentNullException.ThrowIfNull(context);
 
-        var body = NotificationTemplateSubstitutor.Substitute(channel.BodyTemplate ?? DefaultBodyTemplate, context);
-
-        var request = new HttpRequestMessage(new HttpMethod(channel.HttpMethod ?? "POST"), channel.Url!)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-
-        HttpResponseMessage response;
         try
         {
-            response = await httpClient.SendAsync(request, cancellationToken);
+            var body = NotificationTemplateSubstitutor.Substitute(channel.BodyTemplate ?? DefaultBodyTemplate, context);
+
+            var httpMethod = string.IsNullOrWhiteSpace(channel.HttpMethod) ? "POST" : channel.HttpMethod;
+
+            var request = new HttpRequestMessage(new HttpMethod(httpMethod), channel.Url!)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+
+            var response = await httpClient.SendAsync(request, cancellationToken);
+
+            return response.IsSuccessStatusCode
+                ? NotificationSendResult.Succeeded("Webhook notification sent.")
+                : NotificationSendResult.Failed($"Webhook returned status code {(int)response.StatusCode}.");
         }
         catch (HttpRequestException ex)
         {
@@ -43,9 +48,13 @@ internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotifi
         {
             return NotificationSendResult.Failed($"Webhook request timed out: {ex.Message}");
         }
-
-        return response.IsSuccessStatusCode
-            ? NotificationSendResult.Succeeded("Webhook notification sent.")
-            : NotificationSendResult.Failed($"Webhook returned status code {(int)response.StatusCode}.");
+        catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or ArgumentException)
+        {
+            // Malformed/missing channel.Url or channel.HttpMethod fails request construction or URI
+            // resolution (no BaseAddress is configured on this HttpClient) -- matches
+            // NamecheapDnsProvider's catch-all-at-the-boundary convention: never let an exception
+            // escape SendAsync.
+            return NotificationSendResult.Failed($"Invalid webhook configuration: {ex.Message}");
+        }
     }
 }

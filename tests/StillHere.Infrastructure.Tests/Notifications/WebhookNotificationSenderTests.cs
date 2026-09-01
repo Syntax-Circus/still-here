@@ -80,10 +80,40 @@ public sealed class WebhookNotificationSenderTests
         result.Success.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task SendAsync_BlankHttpMethod_DefaultsToPostWithoutThrowing()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            capturedRequest = request;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        var sender = CreateSender(handler);
+        var channel = CreateChannel(url: "https://hooks.example.com/notify", httpMethod: "   ", bodyTemplate: null);
+
+        var result = await sender.SendAsync(channel, Context, TestContext.Current.CancellationToken);
+
+        result.Success.ShouldBeTrue();
+        capturedRequest!.Method.ShouldBe(HttpMethod.Post);
+    }
+
+    [Fact]
+    public async Task SendAsync_NullUrl_ReturnsFailedResultWithoutThrowing()
+    {
+        var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        var sender = CreateSender(handler);
+        var channel = CreateChannel(url: null, httpMethod: "POST", bodyTemplate: null);
+
+        var result = await sender.SendAsync(channel, Context, TestContext.Current.CancellationToken);
+
+        result.Success.ShouldBeFalse();
+    }
+
     private static WebhookNotificationSender CreateSender(HttpMessageHandler handler) =>
         new(new HttpClient(handler));
 
-    private static NotificationChannelDto CreateChannel(string url, string? httpMethod, string? bodyTemplate) =>
+    private static NotificationChannelDto CreateChannel(string? url, string? httpMethod, string? bodyTemplate) =>
         new(
             Id: 1,
             Type: NotificationChannelType.Webhook,
