@@ -24,6 +24,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRunScheduledDomainCheckHandler, RunScheduledDomainCheckHandler>();
         services.AddScoped<IRunManualDomainCheckRequestHandler, RunManualDomainCheckRequestHandler>();
+        services.AddScoped<IListDueDomainsHandler, ListDueDomainsHandler>();
 
         return services;
     }
