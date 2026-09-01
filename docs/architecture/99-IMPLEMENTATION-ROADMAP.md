@@ -8,7 +8,7 @@ Ordered phase index, dependencies, and status. Implementation starts only when t
 | 2 | [PHASE-02-auth](PHASE-02-auth.md) | Phase 01 | Complete |
 | 3 | [PHASE-03-dns-provider-abstraction](PHASE-03-dns-provider-abstraction.md) | Phase 01 | Complete |
 | 4 | [PHASE-04-domain-management-ui](PHASE-04-domain-management-ui.md) | Phase 02, Phase 03 | Complete |
-| 5 | [PHASE-05-ip-detection](PHASE-05-ip-detection.md) | Phase 01 | Not started |
+| 5 | [PHASE-05-ip-detection](PHASE-05-ip-detection.md) | Phase 01 | Complete |
 | 6 | [PHASE-06-scheduler](PHASE-06-scheduler.md) | Phase 03, Phase 04, Phase 05 | Not started |
 | 7 | [PHASE-07-dashboard-audit-log](PHASE-07-dashboard-audit-log.md) | Phase 04, Phase 06 | Not started |
 | 8 | [PHASE-08-notifications](PHASE-08-notifications.md) | Phase 06 | Not started |

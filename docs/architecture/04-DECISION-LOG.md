@@ -153,3 +153,44 @@ Not a boundary-pattern deviation — `ICredentialProtector` still lives in `Stil
 
 - **Approved by:** Project owner
 - **Approved on:** 2026-09-01
+
+---
+
+## Decision 5: Split Scoped `IpDetectionService` / Singleton `IpDetectionCache`
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [02-ARCHITECTURE.md](02-ARCHITECTURE.md), [PHASE-05-ip-detection.md](PHASE-05-ip-detection.md)
+
+### Context
+
+`PHASE-05-ip-detection.md` requires one external IP lookup to be shared across all due domains within a scheduler tick, and reused by a "check now" call that lands shortly after (FR-13). `IpDetectionService` needs `AppDbContext` (registered `Scoped` by `AddDbContext`) to read `GlobalSettings.ExternalIpCheckServices`, so it must itself be registered `Scoped` — but a cache that only lives as long as one scope can't be shared across ticks/due-domains regardless of how Phase 06's scheduler shapes its DI scopes (still undecided as of this phase).
+
+### Decision
+
+Split the cache into its own class, `IpDetectionCache` (semaphore-guarded, 25s TTL), registered `Singleton` and injected into the `Scoped` `IpDetectionService`. A `Singleton` cannot hold a `Scoped` dependency directly (captive-dependency error), so the cache is deliberately kept free of any `AppDbContext`/EF dependency — it only ever sees the already-resolved `IpDetectionResult` its caller passes it. Only successful lookups are cached; a failed detection is not, so a transient blip on one attempt doesn't force every other caller in the same window to also fail without retrying.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — both classes stay within `StillHere.Infrastructure`, and `IIpDetectionService`'s public contract (Application-facing) is unaffected by this internal lifetime split.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Infrastructure/IpDetection/` only.
+- **Consequences:** The cache correctly outlives any single DI scope regardless of Phase 06's eventual scheduler-scoping design; adds one extra registered singleton and one extra class versus a simpler (but incorrect for a `Scoped` service) single-class design.
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent, unless a future phase moves `GlobalSettings` reads off `AppDbContext` entirely (e.g. a config-reload service), at which point `IpDetectionService` could itself become `Singleton` and the split could be collapsed.
+
+### Alternatives Considered
+
+- A single `Singleton` `IpDetectionService` holding `IDbContextFactory<AppDbContext>` instead of `AppDbContext` directly — rejected: no other infrastructure component in this codebase uses `IDbContextFactory`, and introducing it for one class would be inconsistent with the established `AppDbContext`-injection convention (`ManagedDomainRepository`, `AdminUserRepository`) for no benefit beyond what the simpler split already achieves.
+
+### Consequences
+
+- Positive: correct cross-scope cache sharing with no dependency on how Phase 06 shapes its scheduler's DI scopes; the cache is trivially unit-testable in isolation (no DB/HTTP setup needed).
+- Negative: one more moving part (two classes instead of one) for what is conceptually a single service.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01
