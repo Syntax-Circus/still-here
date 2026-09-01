@@ -185,6 +185,56 @@ public sealed class ManagedDomainRepositoryTests : IDisposable
         domain.LastUpdatedAtUtc.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task ListDashboardSummariesAsync_ReturnsAllDomainsIncludingDisabled_OrderedByName()
+    {
+        var zebra = await _repository.CreateAsync(
+            "zebra.com", "@", "namecheap", "cred1", "encrypted1", null, CancellationToken.None);
+        var apple = await _repository.CreateAsync(
+            "apple.com", "@", "namecheap", "cred2", "encrypted2", null, CancellationToken.None);
+        await _repository.UpdateAsync(
+            zebra.Id, "zebra.com", "@", enabled: false, null, newEncryptedSecretsJson: null, CancellationToken.None);
+
+        var summaries = await _repository.ListDashboardSummariesAsync(CancellationToken.None);
+
+        summaries.Count.ShouldBe(2);
+        summaries[0].Id.ShouldBe(apple.Id);
+        summaries[0].DomainName.ShouldBe("apple.com");
+        summaries[1].Id.ShouldBe(zebra.Id);
+        summaries[1].Enabled.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(DomainCheckOutcomeKind.Unchanged, ManagedDomainStatus.Unchanged)]
+    [InlineData(DomainCheckOutcomeKind.Updated, ManagedDomainStatus.Ok)]
+    [InlineData(DomainCheckOutcomeKind.UpdateFailed, ManagedDomainStatus.Failed)]
+    [InlineData(DomainCheckOutcomeKind.DetectionFailed, ManagedDomainStatus.Failed)]
+    public async Task ListDashboardSummariesAsync_MapsEachLastStatusToApplicationEnum(
+        DomainCheckOutcomeKind outcomeKind, ManagedDomainStatus expectedStatus)
+    {
+        var created = await _repository.CreateAsync(
+            "example.com", "@", "namecheap", "cred", "encrypted", null, CancellationToken.None);
+        await _repository.RecordCheckResultAsync(
+            created.Id, outcomeKind, "1.2.3.4", DateTime.UtcNow, CancellationToken.None);
+
+        var summaries = await _repository.ListDashboardSummariesAsync(CancellationToken.None);
+
+        summaries[0].Status.ShouldBe(expectedStatus);
+    }
+
+    [Fact]
+    public async Task ListDashboardSummariesAsync_NeverChecked_ReturnsUnknownStatus()
+    {
+        await _repository.CreateAsync(
+            "example.com", "@", "namecheap", "cred", "encrypted", null, CancellationToken.None);
+
+        var summaries = await _repository.ListDashboardSummariesAsync(CancellationToken.None);
+
+        summaries[0].Status.ShouldBe(ManagedDomainStatus.Unknown);
+        summaries[0].LastKnownIp.ShouldBeNull();
+        summaries[0].LastCheckedAtUtc.ShouldBeNull();
+    }
+
     public void Dispose()
     {
         _db.Dispose();

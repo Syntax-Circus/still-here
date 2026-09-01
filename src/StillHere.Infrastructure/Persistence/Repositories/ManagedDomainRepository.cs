@@ -93,6 +93,17 @@ internal sealed class ManagedDomainRepository(AppDbContext db) : IManagedDomainR
             .Select(d => new ManagedDomainScheduleSummaryDto(d.Id, d.PollingIntervalOverrideSeconds, d.LastCheckedAtUtc))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ManagedDomainSummaryDto>> ListDashboardSummariesAsync(CancellationToken cancellationToken)
+    {
+        var domains = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .AsNoTracking()
+            .OrderBy(d => d.DomainName)
+            .ToListAsync(cancellationToken);
+
+        return [.. domains.Select(ToSummaryDto)];
+    }
+
     public async Task<ManagedDomainCheckDetailDto?> FindForCheckAsync(int id, CancellationToken cancellationToken)
     {
         var domain = await db.ManagedDomains
@@ -147,4 +158,25 @@ internal sealed class ManagedDomainRepository(AppDbContext db) : IManagedDomainR
         domain.Enabled,
         domain.PollingIntervalOverrideSeconds,
         domain.CreatedAtUtc);
+
+    private static ManagedDomainSummaryDto ToSummaryDto(ManagedDomain domain) => new(
+        domain.Id,
+        domain.DomainName,
+        domain.Host,
+        domain.ProviderCredential!.ProviderKey,
+        domain.Enabled,
+        domain.PollingIntervalOverrideSeconds,
+        domain.LastKnownIp,
+        domain.LastCheckedAtUtc,
+        domain.LastUpdatedAtUtc,
+        ToApplicationStatus(domain.LastStatus));
+
+    private static ManagedDomainStatus ToApplicationStatus(DomainCheckStatus status) => status switch
+    {
+        DomainCheckStatus.Unknown => ManagedDomainStatus.Unknown,
+        DomainCheckStatus.Ok => ManagedDomainStatus.Ok,
+        DomainCheckStatus.Unchanged => ManagedDomainStatus.Unchanged,
+        DomainCheckStatus.Failed => ManagedDomainStatus.Failed,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+    };
 }

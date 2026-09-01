@@ -42,6 +42,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(e => e.ManagedDomainId)
                 .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.TimestampUtc);
+            entity.HasIndex(e => new { e.ManagedDomainId, e.TimestampUtc });
         });
 
         modelBuilder.Entity<NotificationChannel>(entity =>

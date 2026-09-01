@@ -31,6 +31,8 @@ public interface IManagedDomainRepository
 
     Task<IReadOnlyList<ManagedDomainScheduleSummaryDto>> ListEnabledSummariesAsync(CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<ManagedDomainSummaryDto>> ListDashboardSummariesAsync(CancellationToken cancellationToken);
+
     Task<ManagedDomainCheckDetailDto?> FindForCheckAsync(int id, CancellationToken cancellationToken);
 
     Task RecordCheckResultAsync(

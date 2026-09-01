@@ -11,7 +11,7 @@ internal sealed class AuditLogWriter(AppDbContext db) : IAuditLogWriter
         {
             ManagedDomainId = request.ManagedDomainId,
             TimestampUtc = request.TimestampUtc,
-            EventType = ToEntityEventType(request.EventType),
+            EventType = AuditEventTypeMapper.ToEntity(request.EventType),
             OldIp = request.OldIp,
             NewIp = request.NewIp,
             Message = request.Message,
@@ -20,13 +20,4 @@ internal sealed class AuditLogWriter(AppDbContext db) : IAuditLogWriter
 
         await db.SaveChangesAsync(cancellationToken);
     }
-
-    private static AuditEventType ToEntityEventType(AuditEventKind kind) => kind switch
-    {
-        AuditEventKind.CheckOnly => AuditEventType.CheckOnly,
-        AuditEventKind.IpChanged => AuditEventType.IpChanged,
-        AuditEventKind.UpdateFailed => AuditEventType.UpdateFailed,
-        AuditEventKind.UpdateSucceeded => AuditEventType.UpdateSucceeded,
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
 }

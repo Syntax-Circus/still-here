@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddSingleton<ICredentialProtector, CredentialProtector>();
         services.AddScoped<IGlobalSettingsReader, GlobalSettingsReader>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
         services.AddResilientHttpClient(
             "namecheap-ddns",
