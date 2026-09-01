@@ -7,6 +7,7 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- CA1861: fires on EF Core's auto-generated migration seed-data arrays (HasData), which are never hand-edited -->
-    <NoWarn>$(NoWarn);CA1861</NoWarn>
+    <!-- CA1707: underscore-separated test method names (e.g. MethodName_Scenario_ExpectedResult) are the intended convention here -->
+    <NoWarn>$(NoWarn);CA1861;CA1707</NoWarn>
   </PropertyGroup>
 </Project>
