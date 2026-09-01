@@ -44,47 +44,49 @@ Follow [Razor Component Architecture](../RAZOR_COMPONENT_ARCHITECTURE.md).
 
 ## Deliverables
 
-- [ ] `/` dashboard: domain table, status badges, enabled toggle, "check now" button.
-- [ ] `/audit-log`: global paged, filterable audit log.
-- [ ] `/domains/{id}/history`: per-domain paged history with old→new IP diff view.
+- [x] `/` dashboard: domain table, status badges, enabled toggle, "check now" button.
+- [x] `/audit-log`: global paged, filterable audit log.
+- [x] `/domains/{id}/history`: per-domain paged history with old→new IP diff view.
 
 ## Actionable Tasks
 
-- [ ] **P07-01** Implement `GetDashboardSummaryRequestHandler` and the `/` page.
+- [x] **P07-01** Implement `GetDashboardSummaryRequestHandler` and the `/` page.
   - **Depends on:** Phase 04
   - **Validation:** Handler test covers empty state; manual verification of live status badges.
-- [ ] **P07-02** Implement `GetAuditLogEntriesRequestHandler` with filter/paging, and the `/audit-log` and `/domains/{id}/history` pages.
+- [x] **P07-02** Implement `GetAuditLogEntriesRequestHandler` with filter/paging, and the `/audit-log` and `/domains/{id}/history` pages.
   - **Depends on:** Phase 06
   - **Validation:** Handler test covers filter/paging logic; manual verification of filtering by event type/success/date range.
-- [ ] **P07-03** Wire the "check now" button to `RunManualDomainCheckRequestHandler` (Phase 06).
+- [x] **P07-03** Wire the "check now" button to `RunManualDomainCheckRequestHandler` (Phase 06).
   - **Depends on:** P07-01, Phase 06
   - **Validation:** Manual verification — clicking "check now" updates the dashboard row and writes an audit entry.
 
 ## Success Criteria
 
-- [ ] `dotnet test` passes for dashboard/audit-log handler tests.
-- [ ] Manual verification: full flow — add a domain (Phase 04), see it on the dashboard, trigger "check now," see the result reflected and logged.
+- [x] `dotnet test` passes for dashboard/audit-log handler tests.
+- [x] Manual verification: full flow — add a domain (Phase 04), see it on the dashboard, trigger "check now," see the result reflected and logged.
 
 ## Boundary Validation
 
-- [ ] Application use-case entry points delegate to the named handlers listed above.
-- [ ] Framework-owned operational or static exemptions execute no application workflow.
-- [ ] Handler constructor dependencies contain only approved abstractions.
-- [ ] Persistence and integration entities do not cross infrastructure boundaries.
-- [ ] Cancellation reaches asynchronous handler dependencies.
-- [ ] Expected outcomes and transport mapping have focused tests.
-- [ ] Infrastructure implementations have integration coverage where applicable.
-- [ ] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback.
-- [ ] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind.
-- [ ] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel.
-- [ ] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies.
-- [ ] API request and response contracts use DTO names and contracts, never Razor ViewModels.
-- [ ] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values.
-- [ ] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
+- [x] Application use-case entry points delegate to the named handlers listed above.
+- [x] Framework-owned operational or static exemptions execute no application workflow.
+- [x] Handler constructor dependencies contain only approved abstractions.
+- [x] Persistence and integration entities do not cross infrastructure boundaries.
+- [x] Cancellation reaches asynchronous handler dependencies.
+- [x] Expected outcomes and transport mapping have focused tests.
+- [x] Infrastructure implementations have integration coverage where applicable.
+- [x] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback.
+- [x] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind.
+- [x] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel.
+- [x] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies.
+- [x] API request and response contracts use DTO names and contracts, never Razor ViewModels.
+- [x] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values.
+- [x] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
 
 ## Risks and Open Questions
 
-- [ ] None specific to this phase.
+- [x] Styling convention (Bootstrap 5 via SCSS + `AspNetCore.SassCompiler` + libman, applied to all pages including pre-existing ones) and check-now-on-disabled-domains behavior (always enabled) were resolved with the project owner before implementation.
+- [x] `FirstRunGateMiddleware` (Phase 02) did not exempt static assets (CSS/JS) from its pre-admin redirect, breaking the `/setup` and `/login` pages' own styling once real CSS was wired in — fixed by adding an extension-based exemption alongside the existing prefix exemptions.
+- [x] Native `<select @bind>` does not reliably round-trip a nullable `bool` in Blazor Server — the audit log's success/failure filter is bound through a string-backed field instead.
 
 ## Handoff
 
