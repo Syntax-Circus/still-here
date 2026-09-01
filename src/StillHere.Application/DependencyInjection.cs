@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IDeleteManagedDomainRequestHandler, DeleteManagedDomainRequestHandler>();
 
         services.AddScoped<IRunScheduledDomainCheckHandler, RunScheduledDomainCheckHandler>();
+        services.AddScoped<IRunManualDomainCheckRequestHandler, RunManualDomainCheckRequestHandler>();
 
         return services;
     }
