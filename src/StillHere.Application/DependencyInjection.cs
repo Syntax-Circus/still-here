@@ -5,6 +5,7 @@ using StillHere.Application.Features.Dashboard;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.DomainChecks;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.Features.Notifications;
 
 namespace StillHere.Application;
 
@@ -30,6 +31,10 @@ public static class DependencyInjection
 
         services.AddScoped<IGetDashboardSummaryRequestHandler, GetDashboardSummaryRequestHandler>();
         services.AddScoped<IGetAuditLogEntriesRequestHandler, GetAuditLogEntriesRequestHandler>();
+
+        services.AddScoped<ICreateNotificationChannelRequestHandler, CreateNotificationChannelRequestHandler>();
+        services.AddScoped<IUpdateNotificationChannelRequestHandler, UpdateNotificationChannelRequestHandler>();
+        services.AddScoped<IDeleteNotificationChannelRequestHandler, DeleteNotificationChannelRequestHandler>();
 
         return services;
     }
