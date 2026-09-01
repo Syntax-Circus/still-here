@@ -1,10 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using StillHere.Application.Features.Auth;
+using StillHere.Application.Features.DnsProviders;
+using StillHere.Infrastructure.DnsProviders;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Infrastructure.Persistence.Repositories;
 using StillHere.Infrastructure.Security;
+using SyntaxCircus.Http.Resilience;
 
 namespace StillHere.Infrastructure;
 
@@ -22,6 +26,20 @@ public static class DependencyInjection
 
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
         services.AddSingleton<IAdminPasswordHasher, AdminPasswordHasher>();
+
+        services.AddResilientHttpClient(
+            "namecheap-ddns",
+            client =>
+            {
+                client.BaseAddress = new Uri("https://dynamicdns.park-your-domain.com/");
+                client.Timeout = TimeSpan.FromSeconds(15);
+            },
+            retryCount: 3,
+            onRetry: (name, attempt, statusCode) =>
+                Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
+            onBreak: (name, statusCode) =>
+                Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
+            .AddTypedClient<IDnsProvider, NamecheapDnsProvider>();
 
         return services;
     }

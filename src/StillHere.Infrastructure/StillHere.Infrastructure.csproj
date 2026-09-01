@@ -11,6 +11,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="SyntaxCircus.Http.Resilience" />
   </ItemGroup>
 
   <ItemGroup>
