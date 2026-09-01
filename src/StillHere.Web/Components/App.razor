@@ -13,7 +13,10 @@
 </head>
 
 <body>
-    <Routes />
+    <GlobalErrorBoundary BoundaryName="still-here admin UI" Title="We hit an unexpected snag."
+                          Description="still-here could not finish rendering this screen. Try again to recover.">
+        <Routes />
+    </GlobalErrorBoundary>
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>

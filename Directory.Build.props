@@ -6,5 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- CA1861: fires on EF Core's auto-generated migration seed-data arrays (HasData), which are never hand-edited -->
+    <NoWarn>$(NoWarn);CA1861</NoWarn>
   </PropertyGroup>
 </Project>
