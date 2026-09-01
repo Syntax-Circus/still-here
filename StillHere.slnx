@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StillHere.Application/StillHere.Application.csproj" />
+    <Project Path="src/StillHere.Infrastructure/StillHere.Infrastructure.csproj" />
+    <Project Path="src/StillHere.Web/StillHere.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StillHere.Application.Tests/StillHere.Application.Tests.csproj" />
+    <Project Path="tests/StillHere.Architecture.Tests/StillHere.Architecture.Tests.csproj" />
+    <Project Path="tests/StillHere.Infrastructure.Tests/StillHere.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
