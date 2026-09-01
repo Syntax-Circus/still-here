@@ -31,7 +31,7 @@
 
 Carried forward from the original plan, unchanged:
 
-**`AdminUser`** — `Id`, `Username`, `PasswordHash`, `PasswordSalt`, `CreatedAtUtc`, `LastLoginAtUtc`.
+**`AdminUser`** — `Id`, `Username`, `PasswordHash`, `CreatedAtUtc`, `LastLoginAtUtc`. (No separate `PasswordSalt` column — `PasswordHasher<T>`'s output embeds its own salt/iteration metadata; see Phase 02.)
 
 **`DnsProviderCredential`** — `Id`, `ProviderKey`, `Name`, `EncryptedSecrets` (JSON, encrypted via `SyntaxCircus.Credentials`), `CreatedAtUtc`.
 
@@ -45,7 +45,9 @@ Carried forward from the original plan, unchanged:
 
 ## Authentication and Authorization
 
-Custom single-admin cookie auth — see [04-DECISION-LOG.md § Decision 2](04-DECISION-LOG.md#decision-2-custom-single-admin-cookie-auth-instead-of-oauthauthentik). `AdminUser` remains a real table (not an env-var check) to keep a future multi-user migration low-effort. First-run `/setup` gate; `[Authorize]` on every route except `/setup`/`/login`. Identity is exposed to handlers via `ICurrentUserService` (`SyntaxCircus.Common` or a project-local equivalent) — handlers never read cookies/claims directly.
+Custom single-admin cookie auth — see [04-DECISION-LOG.md § Decision 2](04-DECISION-LOG.md#decision-2-custom-single-admin-cookie-auth-instead-of-oauthauthentik). `AdminUser` remains a real table (not an env-var check) to keep a future multi-user migration low-effort. First-run `/setup` gate; `[Authorize]` on every route except `/setup`/`/login`. Identity is exposed to handlers via `ICurrentUserService` (`SyntaxCircus.Common`) — handlers never read cookies/claims directly.
+
+Password hashing (resolved in Phase 02, was an open question through Phase 01): `Microsoft.AspNetCore.Identity.PasswordHasher<T>`, used standalone via `PasswordHasher<string>` behind a project-local `IAdminPasswordHasher` — not full ASP.NET Core Identity, and not BCrypt.Net. Matches the real, working `ApiKeyHasher` precedent in the sibling `cryp-tradr` repo. Sign-in itself (`HttpContext.SignInAsync`) happens in `StillHere.Web`'s `AuthEndpoints.cs` minimal-API entry points (`/setup`, `/login`, `/logout`), not inside a handler — handlers must never depend on `HttpContext` (forbidden per `APPLICATION_ARCHITECTURE.md`), so cookie sign-in is entry-point-owned, not handler- or repository-owned.
 
 ## Persistence
 
@@ -73,8 +75,8 @@ Per [Application Architecture](../APPLICATION_ARCHITECTURE.md) (copied locally f
 
 | Entry point/use case | Named handler | Application dependencies | Infrastructure implementations | Outcome mapping | Tests | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/login` submit | `AuthenticateAdminRequestHandler` | `IAdminUserRepository`, `IPasswordHasher`, `ICurrentUserService` | EF repository, ASP.NET cookie sign-in (infra-owned) | `Result<AuthenticatedAdminDto>` → sets auth cookie or shows validation error | Handler: substituted repo/hasher. Entry point: cookie sign-in delegation | — |
-| `/setup` submit | `CreateInitialAdminRequestHandler` | `IAdminUserRepository`, `IPasswordHasher` | EF repository | `Result<AdminUserDto>` → redirect to `/` or show error; blocked if an admin already exists | Handler: no-admin and admin-exists branches | — |
+| `/login` submit | `AuthenticateAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository. Cookie sign-in is entry-point-owned (`AuthEndpoints.cs`), not a handler dependency — handlers must never depend on `HttpContext` | `Result<AuthenticatedAdminDto>` → entry point sets auth cookie on success or shows validation error | Handler: substituted repo/hasher. Entry point: cookie sign-in delegation | — |
+| `/setup` submit | `CreateInitialAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository | `Result<AdminUserDto>` → redirect to `/` or show error; blocked if an admin already exists | Handler: no-admin and admin-exists branches | — |
 | `/domains/add` submit | `AddManagedDomainRequestHandler` | `IManagedDomainRepository`, `IDnsProviderRegistry`, `ICredentialProtector` | EF repository, `SyntaxCircus.Credentials` | `Result<ManagedDomainDto>` | Handler: validation, provider-field mismatch | — |
 | `/domains/{id}/edit` submit | `UpdateManagedDomainRequestHandler` | `IManagedDomainRepository`, `ICredentialProtector` | EF repository, `SyntaxCircus.Credentials` | `Result<ManagedDomainDto>` | Handler: not-found, validation | — |
 | Domain delete action | `DeleteManagedDomainRequestHandler` | `IManagedDomainRepository` | EF repository | `Result` | Handler: not-found | — |
@@ -83,7 +85,7 @@ Per [Application Architecture](../APPLICATION_ARCHITECTURE.md) (copied locally f
 | Notification channel add | `CreateNotificationChannelRequestHandler` | `INotificationChannelRepository` | EF repository | `Result<NotificationChannelDto>` | Handler: validation | — |
 | Notification channel edit | `UpdateNotificationChannelRequestHandler` | `INotificationChannelRepository` | EF repository | `Result<NotificationChannelDto>` | Handler: not-found, validation | — |
 | Notification channel delete | `DeleteNotificationChannelRequestHandler` | `INotificationChannelRepository` | EF repository | `Result` | Handler: not-found | — |
-| Change password | `ChangeAdminPasswordRequestHandler` | `IAdminUserRepository`, `IPasswordHasher`, `ICurrentUserService` | EF repository | `Result` | Handler: wrong-current-password branch | — |
+| Change password | `ChangeAdminPasswordRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher`, `ICurrentUserService` | EF repository | `Result` | Handler: wrong-current-password branch | — |
 | Dashboard load | `GetDashboardSummaryRequestHandler` | `IManagedDomainRepository` | EF repository | `Result<DashboardSummaryDto>` | Handler: empty state | — |
 | Audit log / domain history load | `GetAuditLogEntriesRequestHandler` | `IAuditLogRepository` | EF repository | `Result<PagedResult<AuditLogEntryDto>>` | Handler: filter/paging logic | — |
 | Scheduler tick (`BackgroundService`, constructor-injected per the hosted-job exception) | `RunScheduledDomainCheckHandler` | Same as "check now" | Same as "check now" | `Task` (fire-and-forget per domain; no caller branches on outcome) | Handler: due-domain selection, shared IP-lookup caching | — |

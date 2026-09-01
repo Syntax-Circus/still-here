@@ -13,7 +13,8 @@ Implement single-admin authentication: first-run `/setup`, `/login`, cookie auth
 ## Architecture Decisions
 
 - Custom single-admin cookie auth instead of OAuth/Authentik — see [04-DECISION-LOG.md](04-DECISION-LOG.md) #2.
-- Final password hasher choice (`PasswordHasher<T>` vs BCrypt.Net) resolved in this phase — see open question in [PROJECT_BRIEF.md](../PROJECT_BRIEF.md#open-questions).
+- Password hasher: `Microsoft.AspNetCore.Identity.PasswordHasher<T>`, used standalone via `PasswordHasher<string>` behind a project-local `IAdminPasswordHasher` — not BCrypt.Net, not full ASP.NET Core Identity. Matches the real `ApiKeyHasher` precedent in sibling repo `cryp-tradr`. Resolves the open question from [PROJECT_BRIEF.md](../PROJECT_BRIEF.md#open-questions).
+- Sign-in mechanism: plain `<form method="post">` submissions to `MapPost` minimal-API entry points (`AuthEndpoints.cs`), not interactive `@onclick` handlers — Blazor Server's SignalR circuits can't set response cookies mid-render. Matches the real, working pattern in sibling repo `cmsify.Admin`.
 
 ## Application Boundaries
 
@@ -21,9 +22,10 @@ Follow [Application Architecture](../APPLICATION_ARCHITECTURE.md).
 
 | Entry point/use case | Named handler | Allowed abstractions | Infrastructure implementation | Outcome/transport mapping | Decision |
 | :------------------- | :------------ | :------------------- | :----------------------------- | :------------------------ | :------- |
-| `/setup` submit | `CreateInitialAdminRequestHandler` | `IAdminUserRepository`, `IPasswordHasher` | EF repository | `Result<AdminUserDto>` → redirect to `/` or show error | — |
-| `/login` submit | `AuthenticateAdminRequestHandler` | `IAdminUserRepository`, `IPasswordHasher`, `ICurrentUserService` | EF repository, ASP.NET cookie sign-in | `Result<AuthenticatedAdminDto>` → sets auth cookie or shows validation error | — |
-| Change password (`/settings`, auth portion only) | `ChangeAdminPasswordRequestHandler` | `IAdminUserRepository`, `IPasswordHasher`, `ICurrentUserService` | EF repository | `Result` | — |
+| `/setup` submit | `CreateInitialAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository | `Result<AdminUserDto>` → redirect to `/` or show error | — |
+| `/login` submit | `AuthenticateAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository. Cookie sign-in is entry-point-owned (`AuthEndpoints.cs`), not a handler dependency | `Result<AuthenticatedAdminDto>` → entry point sets auth cookie on success or shows validation error | — |
+| Change password (handler only — see Deliverables note on `/settings`) | `ChangeAdminPasswordRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher`, `ICurrentUserService` | EF repository | `Result` | — |
+| `/setup`, `/login` first-run routing | `FirstRunGateMiddleware` (`UseFirstRunGate`) | `IAdminUserRepository` | — | Redirects; runs before `UseAuthentication`/`UseAuthorization` so a fresh install reaches `/setup` before the cookie scheme's own `LoginPath` challenge would otherwise intercept it | Exempt — pure routing decision, no `Result` semantics, same category as `/healthz`'s inline `Database.CanConnectAsync()` check |
 
 ## Razor Component Boundaries
 
@@ -42,31 +44,31 @@ Follow [Razor Component Architecture](../RAZOR_COMPONENT_ARCHITECTURE.md).
 
 ## Deliverables
 
-- [ ] `/setup` page, reachable only when no `AdminUser` exists.
-- [ ] `/login` page and cookie authentication middleware.
-- [ ] `[Authorize]` applied to every route except `/setup` and `/login`.
-- [ ] `ICurrentUserService` implementation backed by the auth cookie/claims.
-- [ ] Password-change handler wired into `/settings` (page itself may be a stub until Phase 07).
+- [x] `/setup` page, reachable only when no `AdminUser` exists.
+- [x] `/login` page and cookie authentication middleware.
+- [x] `[Authorize]` applied to every route except `/setup` and `/login`.
+- [x] `ICurrentUserService` — already provided by `SyntaxCircus.Common`'s `AddCurrentUserService()` (Phase 01); reads the auth cookie's claims via `IHttpContextAccessor`, no project-specific implementation needed.
+- [x] `ChangeAdminPasswordRequestHandler` implemented and unit-tested. Not wired into a `/settings` page yet — `/settings` doesn't structurally exist until Phase 08 (notifications) per the phase breakdown, so there is nothing to wire it into yet. This phase's own wording ("page itself may be a stub until Phase 07") was aspirational/imprecise; Phase 08 is the correct owner.
 
 ## Actionable Tasks
 
-- [ ] **P02-01** Implement `CreateInitialAdminRequestHandler` and `/setup` page; redirect to `/setup` when no admin exists.
+- [x] **P02-01** Implement `CreateInitialAdminRequestHandler` and `/setup` page; redirect to `/setup` when no admin exists.
   - **Depends on:** Phase 01
   - **Validation:** Handler test covers no-admin and admin-exists branches; `/setup` unreachable once an admin exists.
-- [ ] **P02-02** Implement `AuthenticateAdminRequestHandler`, cookie sign-in, and `/login` page.
+- [x] **P02-02** Implement `AuthenticateAdminRequestHandler`, cookie sign-in, and `/login` page.
   - **Depends on:** P02-01
   - **Validation:** Handler test covers valid/invalid credentials; entry-point test covers cookie sign-in delegation.
-- [ ] **P02-03** Wire `[Authorize]` globally except `/setup`/`/login`; implement `ICurrentUserService`.
+- [x] **P02-03** Wire `[Authorize]` globally except `/setup`/`/login`; implement `ICurrentUserService`.
   - **Depends on:** P02-02
   - **Validation:** Unauthenticated request to any other route redirects to `/login`.
-- [ ] **P02-04** Implement `ChangeAdminPasswordRequestHandler`.
+- [x] **P02-04** Implement `ChangeAdminPasswordRequestHandler`.
   - **Depends on:** P02-02
   - **Validation:** Handler test covers wrong-current-password branch.
 
 ## Success Criteria
 
-- [ ] `dotnet test` passes for all handler and entry-point tests in this phase.
-- [ ] Manual verification: fresh container forces `/setup`, then `/login` works, then all other routes require auth.
+- [x] `dotnet test` passes for all handler and entry-point tests in this phase (30/30 solution-wide).
+- [x] Manual verification (via curl + cookie jar) and the automated `StillHere.Web.Tests` suite: fresh install forces `/setup`, `/setup` becomes unreachable once an admin exists, `/login` works (valid and invalid credentials), all other routes require auth, `/logout` clears the session, `/healthz` unaffected.
 
 ## Boundary Validation
 
@@ -87,7 +89,7 @@ Follow [Razor Component Architecture](../RAZOR_COMPONENT_ARCHITECTURE.md).
 
 ## Risks and Open Questions
 
-- [ ] Final password hasher choice (`PasswordHasher<T>` vs BCrypt.Net) — resolve during P02-01/P02-02 implementation.
+- [x] Final password hasher choice — resolved: `PasswordHasher<T>`, standalone (see Architecture Decisions above).
 
 ## Handoff
 

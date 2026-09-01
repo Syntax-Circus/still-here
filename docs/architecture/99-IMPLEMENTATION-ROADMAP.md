@@ -5,7 +5,7 @@ Ordered phase index, dependencies, and status. Implementation starts only when t
 | # | Phase | Depends on | Status |
 | --- | --- | --- | --- |
 | 1 | [PHASE-01-foundation](PHASE-01-foundation.md) | — | Complete |
-| 2 | [PHASE-02-auth](PHASE-02-auth.md) | Phase 01 | Not started |
+| 2 | [PHASE-02-auth](PHASE-02-auth.md) | Phase 01 | Complete |
 | 3 | [PHASE-03-dns-provider-abstraction](PHASE-03-dns-provider-abstraction.md) | Phase 01 | Not started |
 | 4 | [PHASE-04-domain-management-ui](PHASE-04-domain-management-ui.md) | Phase 02, Phase 03 | Not started |
 | 5 | [PHASE-05-ip-detection](PHASE-05-ip-detection.md) | Phase 01 | Not started |
