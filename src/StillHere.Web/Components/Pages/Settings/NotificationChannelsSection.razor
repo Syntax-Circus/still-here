@@ -47,14 +47,7 @@ else
                             <td>@channel.Name</td>
                             <td>@channel.Type</td>
                             <td>@(channel.Enabled ? "Yes" : "No")</td>
-                            <td>
-                                @string.Join(", ", new[]
-                                {
-                                    channel.TriggerOnIpChange ? "IP change" : null,
-                                    channel.TriggerOnFailure ? "Failure" : null,
-                                    channel.TriggerOnSuccess ? "Success" : null,
-                                }.Where(t => t is not null))
-                            </td>
+                            <td>@FormatTriggers(channel)</td>
                             <td class="text-nowrap">
                                 @if (_confirmingDeleteId == channel.Id)
                                 {

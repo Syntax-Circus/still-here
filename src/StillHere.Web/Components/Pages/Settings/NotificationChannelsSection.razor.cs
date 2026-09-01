@@ -152,4 +152,16 @@ public partial class NotificationChannelsSection
         _successMessage = "Channel deleted.";
         await LoadChannelsAsync();
     }
+
+    private static string FormatTriggers(NotificationChannelDto channel)
+    {
+        string?[] triggers =
+        [
+            channel.TriggerOnIpChange ? "IP change" : null,
+            channel.TriggerOnFailure ? "Failure" : null,
+            channel.TriggerOnSuccess ? "Success" : null,
+        ];
+
+        return string.Join(", ", triggers.Where(t => t is not null));
+    }
 }
