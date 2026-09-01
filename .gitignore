@@ -1,8 +1,8 @@
-# Quartermaster-specific
-qm.db
-qm.db-shm
-qm.db-wal
-qm.local.yaml
+# still-here-specific
+stillhere.db
+stillhere.db-shm
+stillhere.db-wal
+keys/
 .env
 !.env.example
 .env.local
