@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
+using StillHere.Application.Features.Domains;
+using StillHere.Application.Security;
 using StillHere.Infrastructure.DnsProviders;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Infrastructure.Persistence.Repositories;
@@ -26,6 +28,9 @@ public static class DependencyInjection
 
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
         services.AddSingleton<IAdminPasswordHasher, AdminPasswordHasher>();
+
+        services.AddScoped<IManagedDomainRepository, ManagedDomainRepository>();
+        services.AddSingleton<ICredentialProtector, CredentialProtector>();
 
         services.AddResilientHttpClient(
             "namecheap-ddns",
