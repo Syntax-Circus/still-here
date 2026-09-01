@@ -13,4 +13,8 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Core" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="StillHere.Infrastructure.Tests" />
+  </ItemGroup>
+
 </Project>
