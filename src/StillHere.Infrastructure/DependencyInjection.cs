@@ -14,6 +14,7 @@ using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
 using StillHere.Infrastructure.DnsProviders;
 using StillHere.Infrastructure.IpDetection;
+using StillHere.Infrastructure.Notifications;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Infrastructure.Persistence.Repositories;
 using StillHere.Infrastructure.Scheduling;
@@ -70,6 +71,16 @@ public static class DependencyInjection
                 Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
             onBreak: (name, statusCode) =>
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode));
+
+        services.AddResilientHttpClient(
+            "notification-webhook",
+            client => client.Timeout = TimeSpan.FromSeconds(10),
+            retryCount: 2,
+            onRetry: (name, attempt, statusCode) =>
+                Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
+            onBreak: (name, statusCode) =>
+                Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
+            .AddTypedClient<INotificationSender, WebhookNotificationSender>();
 
         // Makes ILogger<T> resolvable even from a bare ServiceCollection in DI tests -- real
         // Program.cs's WebApplicationBuilder already provides this implicitly. First place in the
