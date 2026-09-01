@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+using StillHere.Application.IpDetection;
 using StillHere.Infrastructure.IpDetection;
 using StillHere.Infrastructure.Persistence;
 using Xunit;
@@ -149,6 +150,38 @@ public sealed class IpDetectionServiceTests : IDisposable
 
         result.Success.ShouldBeFalse();
         handler.CallCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void CompareProviderReportedIp_MatchingIp_ReturnsMatch()
+    {
+        var service = CreateService(new StubHttpMessageHandler(_ => throw new InvalidOperationException("Should not be called")));
+
+        service.CompareProviderReportedIp("1.2.3.4", "1.2.3.4").ShouldBe(ProviderIpComparisonOutcome.Match);
+    }
+
+    [Fact]
+    public void CompareProviderReportedIp_DifferentIp_ReturnsMismatch()
+    {
+        var service = CreateService(new StubHttpMessageHandler(_ => throw new InvalidOperationException("Should not be called")));
+
+        service.CompareProviderReportedIp("1.2.3.4", "5.6.7.8").ShouldBe(ProviderIpComparisonOutcome.Mismatch);
+    }
+
+    [Fact]
+    public void CompareProviderReportedIp_ProviderDidNotReportIp_ReturnsNotReported()
+    {
+        var service = CreateService(new StubHttpMessageHandler(_ => throw new InvalidOperationException("Should not be called")));
+
+        service.CompareProviderReportedIp("1.2.3.4", null).ShouldBe(ProviderIpComparisonOutcome.NotReported);
+    }
+
+    [Fact]
+    public void CompareProviderReportedIp_WhitespaceProviderReportedIp_ReturnsNotReported()
+    {
+        var service = CreateService(new StubHttpMessageHandler(_ => throw new InvalidOperationException("Should not be called")));
+
+        service.CompareProviderReportedIp("1.2.3.4", "   ").ShouldBe(ProviderIpComparisonOutcome.NotReported);
     }
 
     private async Task SetExternalIpCheckServicesAsync(string json)

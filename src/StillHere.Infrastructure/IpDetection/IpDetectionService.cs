@@ -80,4 +80,24 @@ internal sealed class IpDetectionService(
 
         return body;
     }
+
+    public ProviderIpComparisonOutcome CompareProviderReportedIp(string expectedIp, string? providerReportedIp)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedIp);
+
+        if (string.IsNullOrWhiteSpace(providerReportedIp))
+        {
+            return ProviderIpComparisonOutcome.NotReported;
+        }
+
+        if (string.Equals(expectedIp.Trim(), providerReportedIp.Trim(), StringComparison.Ordinal))
+        {
+            return ProviderIpComparisonOutcome.Match;
+        }
+
+        Log.Warning(
+            "Provider-reported IP {ProviderReportedIp} does not match the IP sent {ExpectedIp}.",
+            providerReportedIp, expectedIp);
+        return ProviderIpComparisonOutcome.Mismatch;
+    }
 }
