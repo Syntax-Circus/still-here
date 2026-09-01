@@ -112,3 +112,44 @@ Not applicable — this decision *adopts* the mandatory pattern rather than devi
 
 - **Approved by:** Project owner
 - **Approved on:** 2026-09-01
+
+---
+
+## Decision 4: ASP.NET Core Data Protection Instead of SyntaxCircus.Credentials
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [03-PACKAGE-MAP.md](03-PACKAGE-MAP.md), [PHASE-04-domain-management-ui.md](PHASE-04-domain-management-ui.md), [PROJECT_BRIEF.md](../PROJECT_BRIEF.md)
+
+### Context
+
+Earlier planning (`03-PACKAGE-MAP.md`, `PHASE-04-domain-management-ui.md`, `PROJECT_BRIEF.md`) assumed `SyntaxCircus.Credentials` provides an `ICredentialProtector`-style server-side encryption API for encrypting `DnsProviderCredential.EncryptedSecrets` at rest. Reading its actual v0.1.1 source during Phase 04 implementation showed this is wrong: its only interface is `ICredentialStore` (`GetAsync`/`SetAsync`/`DeleteAsync`/`ExistsAsync` keyed by `(serviceId, accountId)`), backed by the Windows Credential Manager, macOS Keychain, or a Linux `secret-tool` D-Bus service — a desktop OS credential vault, not a database-column encryption library. There is no `ICredentialProtector`, no purpose-string API, and no relationship to ASP.NET Core Data Protection. Its own usage guide states it is "not... a server secret store." A headless Docker container (still-here's deployment target) has no OS keychain, and the package's Linux fallback (`EncryptedFileCredentialStore`) is explicitly disclaimed in its own docs as "not a substitute for a hardened OS keychain" and "not a server secret store."
+
+### Decision
+
+Back `ICredentialProtector` (the name every doc already used) with `Microsoft.AspNetCore.DataProtection` instead — the framework's own built-in mechanism for exactly this need, already registered in `Program.cs` (`AddDataProtection().PersistKeysToFileSystem(...)`) for the auth cookie. No new package is needed. `CredentialProtector` wraps `IDataProtectionProvider.CreateProtector("StillHere.DnsProviderCredentials")`, a distinct purpose string giving real cryptographic isolation from future secret categories (e.g. SMTP passwords in Phase 08).
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — `ICredentialProtector` still lives in `StillHere.Application` with its implementation in `StillHere.Infrastructure`, matching the mandatory abstraction/implementation split. This is a package-selection correction, not a rule deviation.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `SyntaxCircus.Credentials` moves from Selected to Excluded in [03-PACKAGE-MAP.md](03-PACKAGE-MAP.md); `Microsoft.AspNetCore.DataProtection` is documented as the credential-encryption mechanism instead.
+- **Consequences:** No new package dependency (Data Protection already ships with the ASP.NET Core shared framework); one fewer external package to track; encryption keys already persisted to the container's mounted volume via the existing `PersistKeysToFileSystem` configuration.
+- **Approval:** Project owner, 2026-09-01 (retroactive — corrects a planning-time misunderstanding discovered during implementation).
+- **Disposition:** Permanent; `SyntaxCircus.Credentials` would only become relevant again if still-here grew a desktop-client component.
+
+### Alternatives Considered
+
+- `SyntaxCircus.Credentials` as originally planned — rejected: not applicable to a server-side/headless deployment; would require an OS keychain still-here's Docker container doesn't have.
+
+### Consequences
+
+- Positive: uses a framework mechanism already wired into the app; no new package surface to learn or version; the package map's package-count stays lower.
+- Negative: the SyntaxCircus catalog's cross-project consistency benefit (using the same credential package everywhere) doesn't apply here, since the catalog package solves a different problem than the one this app has.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01

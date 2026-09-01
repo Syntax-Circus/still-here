@@ -88,8 +88,8 @@ against project needs and package boundaries.
 - **Logging:** Serilog, via `SyntaxCircus.AspNetCore.Serilog`.
 - **Testing:** xunit.v3 (Microsoft Testing Platform) + Shouldly + NSubstitute.
 - **Styling/design system:** Bootstrap 5 (template default).
-- **Configuration/secrets:** `.env`/`.env.local` for dev via `SyntaxCircus.DotEnv`; ASP.NET Data Protection API + `SyntaxCircus.Credentials` for provider secrets at rest in production.
-- **Syntax Circus packages to consider:** `SyntaxCircus.Common`, `SyntaxCircus.AspNetCore.Serilog`, `SyntaxCircus.Http.Resilience`, `SyntaxCircus.Email`, `SyntaxCircus.Credentials`, `SyntaxCircus.Blazor.Components`, `SyntaxCircus.DotEnv` — see `docs/architecture/03-PACKAGE-MAP.md` for the full selection with statuses.
+- **Configuration/secrets:** `.env`/`.env.local` for dev via `SyntaxCircus.DotEnv`; ASP.NET Core Data Protection API (`ICredentialProtector`) for provider secrets at rest in production — `SyntaxCircus.Credentials` was considered but excluded, since it's a desktop OS credential vault, not a server-side encryption library (see `docs/architecture/04-DECISION-LOG.md` #4).
+- **Syntax Circus packages to consider:** `SyntaxCircus.Common`, `SyntaxCircus.AspNetCore.Serilog`, `SyntaxCircus.Http.Resilience`, `SyntaxCircus.Email`, `SyntaxCircus.Blazor.Components`, `SyntaxCircus.DotEnv` — see `docs/architecture/03-PACKAGE-MAP.md` for the full selection with statuses.
 
 ## Open Questions
 

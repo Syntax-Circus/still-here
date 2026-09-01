@@ -20,7 +20,7 @@
 | Scheduler (`BackgroundService`) | Ticks, selects due domains, invokes handlers |
 | `INotificationSender` implementations | Webhook/email delivery |
 | EF Core `AppDbContext` + repositories | SQLite persistence, entity mapping |
-| `ICredentialProtector` (via `SyntaxCircus.Credentials`) | Encrypt/decrypt provider and SMTP secrets at rest |
+| `ICredentialProtector` (via `Microsoft.AspNetCore.DataProtection`) | Encrypt/decrypt provider and SMTP secrets at rest |
 
 ## Data Flows
 
@@ -34,7 +34,7 @@ Carried forward from the original plan, unchanged:
 
 **`AdminUser`** — `Id`, `Username`, `PasswordHash`, `CreatedAtUtc`, `LastLoginAtUtc`. (No separate `PasswordSalt` column — `PasswordHasher<T>`'s output embeds its own salt/iteration metadata; see Phase 02.)
 
-**`DnsProviderCredential`** — `Id`, `ProviderKey`, `Name`, `EncryptedSecrets` (JSON, encrypted via `SyntaxCircus.Credentials`), `CreatedAtUtc`.
+**`DnsProviderCredential`** — `Id`, `ProviderKey`, `Name`, `EncryptedSecrets` (JSON, encrypted via `ICredentialProtector`/`Microsoft.AspNetCore.DataProtection`), `CreatedAtUtc`.
 
 **`ManagedDomain`** — `Id`, `DomainName`, `Host`, `ProviderCredentialId` (FK), `Enabled`, `PollingIntervalOverrideSeconds` (nullable), `LastKnownIp` (nullable), `LastCheckedAtUtc`, `LastUpdatedAtUtc`, `LastStatus` (enum: `Unknown`/`Ok`/`Unchanged`/`Failed`), `CreatedAtUtc`.
 
@@ -78,8 +78,8 @@ Per [Application Architecture](../APPLICATION_ARCHITECTURE.md) (copied locally f
 | --- | --- | --- | --- | --- | --- | --- |
 | `/login` submit | `AuthenticateAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository. Cookie sign-in is entry-point-owned (`AuthEndpoints.cs`), not a handler dependency — handlers must never depend on `HttpContext` | `Result<AuthenticatedAdminDto>` → entry point sets auth cookie on success or shows validation error | Handler: substituted repo/hasher. Entry point: cookie sign-in delegation | — |
 | `/setup` submit | `CreateInitialAdminRequestHandler` | `IAdminUserRepository`, `IAdminPasswordHasher` | EF repository | `Result<AdminUserDto>` → redirect to `/` or show error; blocked if an admin already exists | Handler: no-admin and admin-exists branches | — |
-| `/domains/add` submit | `AddManagedDomainRequestHandler` | `IManagedDomainRepository`, `IDnsProviderRegistry`, `ICredentialProtector` | EF repository, `SyntaxCircus.Credentials` | `Result<ManagedDomainDto>` | Handler: validation, provider-field mismatch | — |
-| `/domains/{id}/edit` submit | `UpdateManagedDomainRequestHandler` | `IManagedDomainRepository`, `ICredentialProtector` | EF repository, `SyntaxCircus.Credentials` | `Result<ManagedDomainDto>` | Handler: not-found, validation | — |
+| `/domains/add` submit | `AddManagedDomainRequestHandler` | `IManagedDomainRepository`, `IDnsProviderRegistry`, `ICredentialProtector` | EF repository, `Microsoft.AspNetCore.DataProtection` | `Result<ManagedDomainDto>` | Handler: validation, provider-field mismatch | — |
+| `/domains/{id}/edit` submit | `UpdateManagedDomainRequestHandler` | `IManagedDomainRepository`, `IDnsProviderRegistry`, `ICredentialProtector` | EF repository, `Microsoft.AspNetCore.DataProtection` | `Result<ManagedDomainDto>` | Handler: not-found, validation | — |
 | Domain delete action | `DeleteManagedDomainRequestHandler` | `IManagedDomainRepository` | EF repository | `Result` | Handler: not-found | — |
 | "Check now" button | `RunManualDomainCheckRequestHandler` | `IManagedDomainRepository`, `IIpDetectionService`, `IDnsProviderRegistry`, `IAuditLogWriter`, `INotificationDispatcher` | EF repository, `IDnsProvider` impls, HTTP clients, notification senders | `Result<DomainCheckOutcomeDto>` | Handler: unchanged/changed/failure branches, substituted deps | — |
 | `/settings` save | `UpdateGlobalSettingsRequestHandler` | `IGlobalSettingsRepository` | EF repository | `Result` | Handler: validation | — |

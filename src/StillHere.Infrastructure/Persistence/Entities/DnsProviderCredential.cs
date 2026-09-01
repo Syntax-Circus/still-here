@@ -8,7 +8,7 @@ internal sealed class DnsProviderCredential
 
     public required string Name { get; set; }
 
-    /// <summary>JSON blob of provider-specific secret fields, encrypted at rest via SyntaxCircus.Credentials.</summary>
+    /// <summary>JSON blob of provider-specific secret fields, encrypted at rest via ICredentialProtector (ASP.NET Core Data Protection).</summary>
     public required string EncryptedSecrets { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
