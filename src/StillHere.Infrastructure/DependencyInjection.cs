@@ -5,6 +5,7 @@ using Serilog;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.Features.Settings;
 using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
 using StillHere.Infrastructure.DnsProviders;
@@ -33,6 +34,7 @@ public static class DependencyInjection
 
         services.AddScoped<IManagedDomainRepository, ManagedDomainRepository>();
         services.AddSingleton<ICredentialProtector, CredentialProtector>();
+        services.AddScoped<IGlobalSettingsReader, GlobalSettingsReader>();
 
         services.AddResilientHttpClient(
             "namecheap-ddns",
