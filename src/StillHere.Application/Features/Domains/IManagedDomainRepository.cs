@@ -28,4 +28,15 @@ public interface IManagedDomainRepository
         CancellationToken cancellationToken);
 
     Task DeleteAsync(int id, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ManagedDomainScheduleSummaryDto>> ListEnabledSummariesAsync(CancellationToken cancellationToken);
+
+    Task<ManagedDomainCheckDetailDto?> FindForCheckAsync(int id, CancellationToken cancellationToken);
+
+    Task RecordCheckResultAsync(
+        int id,
+        DomainCheckOutcomeKind kind,
+        string? newLastKnownIp,
+        DateTime timestampUtc,
+        CancellationToken cancellationToken);
 }

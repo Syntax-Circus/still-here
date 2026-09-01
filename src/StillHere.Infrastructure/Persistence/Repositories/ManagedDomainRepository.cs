@@ -87,6 +87,58 @@ internal sealed class ManagedDomainRepository(AppDbContext db) : IManagedDomainR
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ManagedDomainScheduleSummaryDto>> ListEnabledSummariesAsync(CancellationToken cancellationToken) =>
+        await db.ManagedDomains.AsNoTracking()
+            .Where(d => d.Enabled)
+            .Select(d => new ManagedDomainScheduleSummaryDto(d.Id, d.PollingIntervalOverrideSeconds, d.LastCheckedAtUtc))
+            .ToListAsync(cancellationToken);
+
+    public async Task<ManagedDomainCheckDetailDto?> FindForCheckAsync(int id, CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+
+        return domain is null
+            ? null
+            : new ManagedDomainCheckDetailDto(
+                domain.Id,
+                domain.DomainName,
+                domain.Host,
+                domain.ProviderCredential!.ProviderKey,
+                domain.ProviderCredential.EncryptedSecrets,
+                domain.LastKnownIp);
+    }
+
+    public async Task RecordCheckResultAsync(
+        int id,
+        DomainCheckOutcomeKind kind,
+        string? newLastKnownIp,
+        DateTime timestampUtc,
+        CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains.FirstAsync(d => d.Id == id, cancellationToken);
+
+        domain.LastCheckedAtUtc = timestampUtc;
+        domain.LastStatus = kind switch
+        {
+            DomainCheckOutcomeKind.Unchanged => DomainCheckStatus.Unchanged,
+            DomainCheckOutcomeKind.Updated => DomainCheckStatus.Ok,
+            DomainCheckOutcomeKind.UpdateFailed => DomainCheckStatus.Failed,
+            DomainCheckOutcomeKind.DetectionFailed => DomainCheckStatus.Failed,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+        };
+
+        if (kind == DomainCheckOutcomeKind.Updated)
+        {
+            domain.LastKnownIp = newLastKnownIp;
+            domain.LastUpdatedAtUtc = timestampUtc;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private static ManagedDomainDto ToDto(ManagedDomain domain, string providerKey) => new(
         domain.Id,
         domain.DomainName,
