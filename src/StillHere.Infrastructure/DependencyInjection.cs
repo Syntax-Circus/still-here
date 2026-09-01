@@ -5,8 +5,10 @@ using Serilog;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.Domains;
+using StillHere.Application.IpDetection;
 using StillHere.Application.Security;
 using StillHere.Infrastructure.DnsProviders;
+using StillHere.Infrastructure.IpDetection;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Infrastructure.Persistence.Repositories;
 using StillHere.Infrastructure.Security;
@@ -45,6 +47,17 @@ public static class DependencyInjection
             onBreak: (name, statusCode) =>
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
             .AddTypedClient<IDnsProvider, NamecheapDnsProvider>();
+
+        services.AddScoped<IIpDetectionService, IpDetectionService>();
+
+        services.AddResilientHttpClient(
+            IpDetectionService.IpCheckHttpClientName,
+            client => client.Timeout = TimeSpan.FromSeconds(5),
+            retryCount: 1,
+            onRetry: (name, attempt, statusCode) =>
+                Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
+            onBreak: (name, statusCode) =>
+                Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode));
 
         return services;
     }
