@@ -194,3 +194,45 @@ Not a boundary-pattern deviation — both classes stay within `StillHere.Infrast
 
 - **Approved by:** Project owner
 - **Approved on:** 2026-09-01
+
+---
+
+## Decision 6: `IServiceScopeFactory`-per-tick-scope for the Singleton `DomainCheckScheduler`
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [PHASE-06-scheduler.md](PHASE-06-scheduler.md)
+
+### Context
+
+`PHASE-06-scheduler.md`'s original Architecture Decision stated that "the scheduler constructor-injects its handler dependency." `DomainCheckScheduler` is a singleton-lifetime `BackgroundService`; its handlers (`IListDueDomainsHandler`, `IRunScheduledDomainCheckHandler`) transitively depend on `IManagedDomainRepository` → `AppDbContext`, which is `Scoped`. Directly constructor-injecting a `Scoped` dependency into a `Singleton` is a captive-dependency error that fails DI scope validation in Development (`ServiceProviderOptions.ValidateScopes`) — the literal original wording would have produced a real bug, not just a style deviation. This is the same class of problem Decision 5 solved for `IpDetectionService`/`IpDetectionCache`, with higher stakes here since the naive reading is outright broken rather than merely suboptimal.
+
+### Decision
+
+Constructor-inject `IServiceScopeFactory` instead of the handler. Each tick (`DomainCheckScheduler.RunTickAsync`) creates one `IServiceScope`, resolves `IListDueDomainsHandler` and `IRunScheduledDomainCheckHandler` from it, uses them for every due domain in that tick, and disposes the scope at tick end. Confirmed against real precedent in the sibling repo `cmsify`'s `ScheduledPublishingService` (`BackgroundServices/ScheduledPublishingService.cs`), which uses the identical `IServiceScopeFactory`-per-unit-of-work shape for the same reason.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — still satisfies `APPLICATION_ARCHITECTURE.md`'s "host types without per-method DI... keep constructor injection" rule. `IServiceScopeFactory` *is* what's constructor-injected; per-tick scope resolution is the closest hosted-service analogue to per-method DI, since a `BackgroundService` has no per-invocation parameter injection to hook into.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Infrastructure/Scheduling/DomainCheckScheduler.cs` only.
+- **Consequences:** Correct DI lifetime handling, passes scope validation in Development; one scope is reused across every due domain in a tick (not one scope per domain, unlike `cmsify`'s lease-based multi-worker design) since this app has a single scheduler instance and ~12 domains — per-domain failure isolation is achieved by a `try`/`catch` around each domain's check, not by scope isolation.
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent pattern for any future singleton-hosted-service-needing-scoped-work case in this codebase.
+
+### Alternatives Considered
+
+- Constructor-injecting the handler directly, as originally documented — rejected: a real captive-dependency bug, not a viable alternative.
+- One `IServiceScope` per due domain (mirroring `cmsify` exactly) — rejected as unnecessary overhead at this app's scale (single scheduler instance, ~12 domains); the shared-scope approach still isolates per-domain failures via `try`/`catch`.
+
+### Consequences
+
+- Positive: correct, bug-free DI lifetime handling; matches a proven pattern from a sibling repo rather than an invented one.
+- Negative: `DomainCheckScheduler`'s tick logic is one level more indirect (scope creation + service resolution) than a direct constructor-injected call would have been, had that been valid.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01

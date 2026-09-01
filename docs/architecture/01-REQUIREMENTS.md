@@ -22,7 +22,7 @@ The owner runs ~12 personally-owned domains against a home network with a non-st
 ## Applications and Workers
 
 - **still-here-admin** (Blazor Server, the one user-facing app) — see [UX-BRIEF-still-here-admin.md](UX-BRIEF-still-here-admin.md).
-- **Scheduler** (in-process `BackgroundService`, `PeriodicTimer`) — no separate UI, drives all check/update activity.
+- **Scheduler** (in-process `BackgroundService`, built on `SyntaxCircus.Common.PeriodicBackgroundService`) — no separate UI, drives all check/update activity.
 
 ## Scope
 
@@ -105,5 +105,5 @@ See [PROJECT_BRIEF.md § Non-Functional Requirements](../PROJECT_BRIEF.md#non-fu
 Carried from [PROJECT_BRIEF.md § Open Questions](../PROJECT_BRIEF.md#open-questions):
 
 - [ ] Exact Namecheap DDNS response XML fields to parse.
-- [ ] Whether "check now" should be rate-limited.
+- [x] Whether "check now" should be rate-limited — resolved in `PHASE-06-scheduler.md` P06-04: no rate limit.
 - [ ] Final password hasher choice (`PasswordHasher<T>` vs BCrypt.Net).
