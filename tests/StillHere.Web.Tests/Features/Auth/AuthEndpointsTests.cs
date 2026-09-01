@@ -55,6 +55,19 @@ public sealed partial class AuthEndpointsTests : IAsyncLifetime
         _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
     [Fact]
+    public async Task Get_StaticCssAsset_NoAdmin_IsNotRedirectedToSetup()
+    {
+        using var client = CreateClient();
+
+        var setupHtml = await client.GetStringAsync("/setup", TestContext.Current.CancellationToken);
+        var cssHref = CssHrefPattern().Match(setupHtml).Groups[1].Value;
+
+        var response = await client.GetAsync(cssHref, TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Get_Root_NoAdmin_RedirectsTowardSetup()
     {
         using var client = CreateClient();
@@ -98,6 +111,21 @@ public sealed partial class AuthEndpointsTests : IAsyncLifetime
 
         using var anonymousClient = CreateClient();
         var response = await anonymousClient.GetAsync("/", TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        response.Headers.Location!.ToString().ShouldContain("/login");
+    }
+
+    [Theory]
+    [InlineData("/audit-log")]
+    [InlineData("/domains/1/history")]
+    public async Task Get_Phase07Routes_Unauthenticated_OnceAdminExists_RedirectsToLogin(string path)
+    {
+        using var setupClient = CreateClient();
+        await SubmitSetupAsync(setupClient, "admin", "correcthorsebattery");
+
+        using var anonymousClient = CreateClient();
+        var response = await anonymousClient.GetAsync(path, TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
         response.Headers.Location!.ToString().ShouldContain("/login");
@@ -173,4 +201,7 @@ public sealed partial class AuthEndpointsTests : IAsyncLifetime
 
     [GeneratedRegex("name=\"__RequestVerificationToken\"\\s+value=\"([^\"]+)\"")]
     private static partial Regex AntiforgeryTokenPattern();
+
+    [GeneratedRegex("<link rel=\"stylesheet\" href=\"([^\"]+\\.css)\"")]
+    private static partial Regex CssHrefPattern();
 }
