@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using StillHere.Application.Features.AuditLog;
 using StillHere.Application.Features.Auth;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Application.Features.Domains;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IManagedDomainRepository, ManagedDomainRepository>();
         services.AddSingleton<ICredentialProtector, CredentialProtector>();
         services.AddScoped<IGlobalSettingsReader, GlobalSettingsReader>();
+        services.AddScoped<IAuditLogWriter, AuditLogWriter>();
 
         services.AddResilientHttpClient(
             "namecheap-ddns",
