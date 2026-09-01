@@ -82,6 +82,8 @@ public static class DependencyInjection
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
             .AddTypedClient<INotificationSender, WebhookNotificationSender>();
 
+        services.AddScoped<INotificationSender, EmailNotificationSender>();
+
         // Makes ILogger<T> resolvable even from a bare ServiceCollection in DI tests -- real
         // Program.cs's WebApplicationBuilder already provides this implicitly. First place in the
         // codebase using ILogger<T> DI instead of static Serilog.Log, forced by
