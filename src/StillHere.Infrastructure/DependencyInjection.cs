@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using StillHere.Application.Features.AuditLog;
 using StillHere.Application.Features.Auth;
@@ -13,6 +15,7 @@ using StillHere.Infrastructure.DnsProviders;
 using StillHere.Infrastructure.IpDetection;
 using StillHere.Infrastructure.Persistence;
 using StillHere.Infrastructure.Persistence.Repositories;
+using StillHere.Infrastructure.Scheduling;
 using StillHere.Infrastructure.Security;
 using SyntaxCircus.Http.Resilience;
 
@@ -63,6 +66,20 @@ public static class DependencyInjection
                 Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
             onBreak: (name, statusCode) =>
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode));
+
+        // Makes ILogger<T> resolvable even from a bare ServiceCollection in DI tests -- real
+        // Program.cs's WebApplicationBuilder already provides this implicitly. First place in the
+        // codebase using ILogger<T> DI instead of static Serilog.Log, forced by
+        // PeriodicBackgroundService's own constructor signature.
+        services.AddLogging();
+
+        var schedulerIntervalSeconds = configuration.GetValue<int?>("Scheduler:TickIntervalSeconds")
+            ?? DomainCheckScheduler.DefaultTickIntervalSeconds;
+
+        services.AddHostedService(sp => new DomainCheckScheduler(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            TimeSpan.FromSeconds(schedulerIntervalSeconds),
+            sp.GetRequiredService<ILogger<DomainCheckScheduler>>()));
 
         return services;
     }

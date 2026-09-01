@@ -25,7 +25,13 @@ public sealed partial class AuthEndpointsTests : IAsyncLifetime
                 // provider would be visible to that eager read.
                 .UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}")
                 .UseSetting("DataProtection:KeysPath", Path.Combine(Path.GetTempPath(), $"stillhere-webtest-keys-{Guid.NewGuid():N}"))
-                .UseSetting("Logging:FilePath", Path.Combine(Path.GetTempPath(), $"stillhere-webtest-logs-{Guid.NewGuid():N}", "log-.txt")));
+                .UseSetting("Logging:FilePath", Path.Combine(Path.GetTempPath(), $"stillhere-webtest-logs-{Guid.NewGuid():N}", "log-.txt"))
+                // The scheduler's first tick fires immediately on host start (no initial delay),
+                // racing this class's own InitializeAsync() migration against the same fresh
+                // SQLite file. The tick's own defensive MigrateAsync() call means this can't fail
+                // a test outright, but a long interval caps the race to at most one tick for this
+                // whole test class's lifetime instead of one every 30s.
+                .UseSetting("Scheduler:TickIntervalSeconds", "3600"));
     }
 
     public async ValueTask InitializeAsync()
