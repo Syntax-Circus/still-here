@@ -16,11 +16,12 @@ RUN dotnet publish src/StillHere.Web/StillHere.Web.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
+    && apt-get install --yes --no-install-recommends curl gosu \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /data \
-    && chown "$APP_UID":"$APP_UID" /data
+    && mkdir -p /data
 COPY --from=build /app/publish .
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
     ConnectionStrings__Default="Data Source=/data/stillhere.db" \
@@ -28,5 +29,5 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     DataProtection__KeysPath=/data/dataprotection-keys
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD curl --fail --silent http://localhost:8080/healthz || exit 1
-USER $APP_UID
-ENTRYPOINT ["dotnet", "StillHere.Web.dll"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["dotnet", "StillHere.Web.dll"]
