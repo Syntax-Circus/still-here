@@ -53,6 +53,14 @@ docker login ghcr.io
 ./Build-StillHereDocker.ps1 -Registry ghcr.io/syntax-circus -Push
 ```
 
+**arm64 locally**: building/pushing `linux/arm64` from a Windows/WSL2 dev machine needs QEMU emulation registered in Docker Desktop's builder, which the script doesn't set up itself (mirrors the sibling `Build-*.ps1` scripts). If a build fails with `exec format error` on an arm64 step, register it with:
+
+```powershell
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
+
+This registration lives in the Docker Desktop/WSL2 VM and does **not** persist across a WSL2 or Docker Desktop restart — rerun the command any time arm64 builds start failing again with the same error. CI doesn't need this; the GitHub Actions workflow registers QEMU itself on every run via `docker/setup-qemu-action`. To skip arm64 locally instead of registering QEMU, pass `-Platforms @('linux/amd64')`.
+
 ## Development
 
 ```bash
