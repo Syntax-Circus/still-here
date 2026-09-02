@@ -13,4 +13,10 @@ public interface IAuditLogRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes entries older than <c>GlobalSettings.AuditLogRetentionDays</c>. A <c>null</c>
+    /// retention window keeps everything and deletes nothing. Returns the number of entries removed.
+    /// </summary>
+    Task<int> PruneExpiredAsync(CancellationToken cancellationToken);
 }

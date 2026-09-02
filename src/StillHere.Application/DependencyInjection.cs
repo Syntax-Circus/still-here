@@ -31,6 +31,7 @@ public static class DependencyInjection
 
         services.AddScoped<IGetDashboardSummaryRequestHandler, GetDashboardSummaryRequestHandler>();
         services.AddScoped<IGetAuditLogEntriesRequestHandler, GetAuditLogEntriesRequestHandler>();
+        services.AddScoped<IPruneExpiredAuditLogEntriesHandler, PruneExpiredAuditLogEntriesHandler>();
 
         services.AddScoped<ICreateNotificationChannelRequestHandler, CreateNotificationChannelRequestHandler>();
         services.AddScoped<IUpdateNotificationChannelRequestHandler, UpdateNotificationChannelRequestHandler>();

@@ -56,6 +56,23 @@ internal sealed class AuditLogRepository(AppDbContext db) : IAuditLogRepository
         return new PagedResult<AuditLogEntryDto>([.. entities.Select(ToDto)], page, pageSize, totalCount);
     }
 
+    public async Task<int> PruneExpiredAsync(CancellationToken cancellationToken)
+    {
+        var settings = await db.GlobalSettings.AsNoTracking()
+            .FirstAsync(s => s.Id == GlobalSettings.SingletonId, cancellationToken);
+
+        if (settings.AuditLogRetentionDays is not { } retentionDays)
+        {
+            return 0;
+        }
+
+        var cutoffUtc = DateTime.UtcNow.AddDays(-retentionDays);
+
+        return await db.AuditLogEntries
+            .Where(e => e.TimestampUtc < cutoffUtc)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
     private static AuditLogEntryDto ToDto(AuditLogEntry entity) => new(
         entity.Id,
         entity.ManagedDomainId,

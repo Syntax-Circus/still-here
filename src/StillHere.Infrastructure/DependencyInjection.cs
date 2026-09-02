@@ -105,6 +105,14 @@ public static class DependencyInjection
             TimeSpan.FromSeconds(schedulerIntervalSeconds),
             sp.GetRequiredService<ILogger<DomainCheckScheduler>>()));
 
+        var auditLogRetentionTickIntervalSeconds = configuration.GetValue<int?>("Scheduler:AuditLogRetentionTickIntervalSeconds")
+            ?? AuditLogRetentionScheduler.DefaultTickIntervalSeconds;
+
+        services.AddHostedService(sp => new AuditLogRetentionScheduler(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            TimeSpan.FromSeconds(auditLogRetentionTickIntervalSeconds),
+            sp.GetRequiredService<ILogger<AuditLogRetentionScheduler>>()));
+
         return services;
     }
 }

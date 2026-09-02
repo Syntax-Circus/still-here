@@ -151,6 +151,37 @@ public sealed class AuditLogRepositoryTests : IDisposable
         result.Items[0].ManagedDomainName.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task PruneExpiredAsync_RetentionSet_RemovesOnlyEntriesOlderThanCutoffAndReturnsCount()
+    {
+        var settings = await _db.GlobalSettings.SingleAsync(CancellationToken.None);
+        settings.AuditLogRetentionDays = 30;
+        await _db.SaveChangesAsync(CancellationToken.None);
+
+        await AddEntryAsync(null, AuditEventType.CheckOnly, DateTime.UtcNow.AddDays(-40));
+        await AddEntryAsync(null, AuditEventType.CheckOnly, DateTime.UtcNow.AddDays(-35));
+        await AddEntryAsync(null, AuditEventType.CheckOnly, DateTime.UtcNow.AddDays(-10));
+
+        var deletedCount = await _repository.PruneExpiredAsync(CancellationToken.None);
+
+        deletedCount.ShouldBe(2);
+        var remaining = await _db.AuditLogEntries.AsNoTracking().ToListAsync(CancellationToken.None);
+        remaining.Count.ShouldBe(1);
+        remaining[0].TimestampUtc.ShouldBeGreaterThan(DateTime.UtcNow.AddDays(-30));
+    }
+
+    [Fact]
+    public async Task PruneExpiredAsync_RetentionNull_RemovesNothingAndReturnsZero()
+    {
+        await AddEntryAsync(null, AuditEventType.CheckOnly, DateTime.UtcNow.AddYears(-10));
+
+        var deletedCount = await _repository.PruneExpiredAsync(CancellationToken.None);
+
+        deletedCount.ShouldBe(0);
+        var remaining = await _db.AuditLogEntries.AsNoTracking().ToListAsync(CancellationToken.None);
+        remaining.Count.ShouldBe(1);
+    }
+
     private async Task<ManagedDomain> CreateDomainAsync(string domainName)
     {
         var credential = new DnsProviderCredential
