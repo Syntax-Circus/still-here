@@ -10,4 +10,9 @@
     <!-- CA1707: underscore-separated test method names (e.g. MethodName_Scenario_ExpectedResult) are the intended convention here -->
     <NoWarn>$(NoWarn);CA1861;CA1707</NoWarn>
   </PropertyGroup>
+
+  <!-- NCrunch's isolated/incremental builds don't need GitVersion's git-history evaluation -->
+  <PropertyGroup Condition="'$(NCrunch)' == '1'">
+    <DisableGitVersionTask>true</DisableGitVersionTask>
+  </PropertyGroup>
 </Project>

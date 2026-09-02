@@ -1,0 +1,33 @@
+# VCS / tooling
+.git
+.github
+.vs
+.cr
+*.ncrunchsolution*
+.claude/settings.local.json
+
+# Build outputs
+**/bin
+**/obj
+**/publish
+TestResults
+
+# Not needed in the image
+tests
+docs
+
+# Local data / secrets (mirrors .gitignore)
+stillhere.db
+stillhere.db-shm
+stillhere.db-wal
+keys/
+logs/
+.env
+.env.local
+!.env.example
+
+# AspNetCore.SassCompiler output -- recompiled during the containerized publish
+src/StillHere.Web/wwwroot/css/
+
+*.log
+*.user

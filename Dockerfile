@@ -1,9 +1,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_VERSION=0.0.0
+ARG BUILD_INFORMATIONAL_VERSION=0.0.0-local
 WORKDIR /src
-COPY Directory.Build.props Directory.Packages.props global.json ./
+COPY Directory.Build.props Directory.Packages.props global.json GitVersion.yml ./
 COPY src/ ./src/
 RUN dotnet restore src/StillHere.Web/StillHere.Web.csproj
-RUN dotnet publish src/StillHere.Web/StillHere.Web.csproj --configuration Release --no-restore --output /app/publish
+RUN dotnet publish src/StillHere.Web/StillHere.Web.csproj \
+    --configuration Release \
+    --no-restore \
+    --output /app/publish \
+    -p:Version="$BUILD_VERSION" \
+    -p:InformationalVersion="$BUILD_INFORMATIONAL_VERSION" \
+    -p:DisableGitVersionTask=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app

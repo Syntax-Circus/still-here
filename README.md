@@ -36,6 +36,23 @@ still-here serves plain HTTP inside the container. Put your own reverse proxy (C
 
 .NET 10, Blazor Server (Interactive Server render mode, Bootstrap 5), EF Core + SQLite, Serilog. See [docs/architecture/](docs/architecture/) for the full discovery and design record, including the [implementation roadmap](docs/architecture/99-IMPLEMENTATION-ROADMAP.md).
 
+## Container images
+
+CI publishes multi-arch images to `ghcr.io/syntax-circus/still-here` on every push to `main`, tagged `latest` and with the GitVersion-computed SemVer (e.g. `0.2.0`). This requires the repo to be public, and — separately — the GHCR package's own visibility set to Public after its first publish (GHCR does not inherit repo visibility automatically).
+
+To build locally without pushing:
+
+```powershell
+./Build-StillHereDocker.ps1
+```
+
+To build and push a multi-arch image to a registry you're already logged into:
+
+```powershell
+docker login ghcr.io
+./Build-StillHereDocker.ps1 -Registry ghcr.io/syntax-circus -Push
+```
+
 ## Development
 
 ```bash
