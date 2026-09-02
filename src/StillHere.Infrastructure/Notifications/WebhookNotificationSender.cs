@@ -13,6 +13,11 @@ namespace StillHere.Infrastructure.Notifications;
 /// </summary>
 internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotificationSender
 {
+    // A notification send is best-effort, not costly to lose -- fewer retries than the DDNS
+    // update client, but more than the IP-check client since a webhook target has no fallback list.
+    internal const int MaxRetryAttempts = 2;
+    internal static readonly TimeSpan HttpTimeout = TimeSpan.FromSeconds(10);
+
     public NotificationChannelType ChannelType => NotificationChannelType.Webhook;
 
     public async Task<NotificationSendResult> SendAsync(

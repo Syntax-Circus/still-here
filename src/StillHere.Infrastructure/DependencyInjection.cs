@@ -51,9 +51,9 @@ public static class DependencyInjection
             client =>
             {
                 client.BaseAddress = new Uri("https://dynamicdns.park-your-domain.com/");
-                client.Timeout = TimeSpan.FromSeconds(15);
+                client.Timeout = NamecheapDnsProvider.HttpTimeout;
             },
-            retryCount: 3,
+            retryCount: NamecheapDnsProvider.MaxRetryAttempts,
             onRetry: (name, attempt, statusCode) =>
                 Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
             onBreak: (name, statusCode) =>
@@ -65,8 +65,8 @@ public static class DependencyInjection
 
         services.AddResilientHttpClient(
             IpDetectionService.IpCheckHttpClientName,
-            client => client.Timeout = TimeSpan.FromSeconds(5),
-            retryCount: 1,
+            client => client.Timeout = IpDetectionService.HttpTimeout,
+            retryCount: IpDetectionService.MaxRetryAttempts,
             onRetry: (name, attempt, statusCode) =>
                 Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
             onBreak: (name, statusCode) =>
@@ -74,8 +74,8 @@ public static class DependencyInjection
 
         services.AddResilientHttpClient(
             "notification-webhook",
-            client => client.Timeout = TimeSpan.FromSeconds(10),
-            retryCount: 2,
+            client => client.Timeout = WebhookNotificationSender.HttpTimeout,
+            retryCount: WebhookNotificationSender.MaxRetryAttempts,
             onRetry: (name, attempt, statusCode) =>
                 Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
             onBreak: (name, statusCode) =>

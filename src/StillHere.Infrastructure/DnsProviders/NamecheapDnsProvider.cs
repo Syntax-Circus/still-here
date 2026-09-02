@@ -16,6 +16,11 @@ internal sealed class NamecheapDnsProvider(HttpClient httpClient) : IDnsProvider
 {
     private const string PasswordFieldKey = "Password";
 
+    // A failed DDNS update is costly (a domain silently points at a stale IP until the next tick),
+    // so this client gets more retries than the cheaper/more-frequent IP-check and webhook clients.
+    internal const int MaxRetryAttempts = 3;
+    internal static readonly TimeSpan HttpTimeout = TimeSpan.FromSeconds(15);
+
     public string ProviderKey => "namecheap";
 
     public string DisplayName => "Namecheap";

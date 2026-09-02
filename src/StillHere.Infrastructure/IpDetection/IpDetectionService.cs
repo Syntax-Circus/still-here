@@ -15,6 +15,12 @@ internal sealed class IpDetectionService(
 {
     internal const string IpCheckHttpClientName = "ip-check";
 
+    // Fewer retries than the other resilient clients: this service already iterates a fallback
+    // list of external IP-check services and caches the result, so one quick attempt per service
+    // beats retrying slowly through a single one.
+    internal const int MaxRetryAttempts = 1;
+    internal static readonly TimeSpan HttpTimeout = TimeSpan.FromSeconds(5);
+
     public Task<IpDetectionResult> DetectCurrentIpAsync(CancellationToken cancellationToken) =>
         cache.GetOrDetectAsync(() => DetectWithoutCacheAsync(cancellationToken), cancellationToken);
 
