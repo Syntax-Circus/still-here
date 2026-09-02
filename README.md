@@ -32,6 +32,8 @@ still-here serves plain HTTP inside the container. Put your own reverse proxy (C
 
 `/healthz` is the container's healthcheck endpoint.
 
+The container runs as a non-root user, pinned to UID/GID `1654` (`APP_UID` in the `Dockerfile`, asserted at build time against the base image's `app` user so a future base image bump can't silently change it). `docker-entrypoint.sh` `chown`s `/data` to that UID on every container start — before dropping to the non-root user to actually run the app — so it self-heals regardless of whether `/data` is a named volume or a bind-mounted host directory, and regardless of what owns that path already.
+
 ## Tech stack
 
 .NET 10, Blazor Server (Interactive Server render mode, Bootstrap 5), EF Core + SQLite, Serilog. See [docs/architecture/](docs/architecture/) for the full discovery and design record, including the [implementation roadmap](docs/architecture/99-IMPLEMENTATION-ROADMAP.md).

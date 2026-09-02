@@ -15,6 +15,18 @@ RUN dotnet publish src/StillHere.Web/StillHere.Web.csproj \
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+
+# Pinned to the `app` user mcr.microsoft.com/dotnet/aspnet:10.0 currently creates at this
+# UID/GID, so it's explicit here rather than left implicit from the base image. The assertion
+# below fails the build loudly if a future base image bump ever changes that, instead of
+# docker-entrypoint.sh silently chown'ing /data to the wrong UID.
+ARG APP_UID=1654
+ENV APP_UID=$APP_UID
+RUN test "$(id -u app)" = "$APP_UID" || { \
+      echo "Base image's 'app' user is UID $(id -u app), not the pinned APP_UID=$APP_UID -- update the ARG in the Dockerfile." >&2; \
+      exit 1; \
+    }
+
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl gosu \
     && rm -rf /var/lib/apt/lists/* \
