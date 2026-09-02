@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".env.example" />
     <File Path=".gitignore" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
+    <File Path="docker-compose.prod.yml" />
     <File Path="docker-compose.yml" />
     <File Path="Dockerfile" />
     <File Path="global.json" />

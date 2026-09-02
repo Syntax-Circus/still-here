@@ -1,0 +1,15 @@
+services:
+  still-here:
+    image: ghcr.io/syntax-circus/still-here:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    environment:
+      AllowedHosts: ${ALLOWED_HOSTS:-*}
+      Scheduler__TickIntervalSeconds: ${SCHEDULER_TICK_INTERVAL_SECONDS:-30}
+      Scheduler__AuditLogRetentionTickIntervalSeconds: ${SCHEDULER_AUDIT_LOG_RETENTION_TICK_INTERVAL_SECONDS:-86400}
+    volumes:
+      - stillhere-data:/data
+
+volumes:
+  stillhere-data:

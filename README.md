@@ -61,6 +61,18 @@ docker run --privileged --rm tonistiigi/binfmt --install all
 
 This registration lives in the Docker Desktop/WSL2 VM and does **not** persist across a WSL2 or Docker Desktop restart — rerun the command any time arm64 builds start failing again with the same error. CI doesn't need this; the GitHub Actions workflow registers QEMU itself on every run via `docker/setup-qemu-action`. To skip arm64 locally instead of registering QEMU, pass `-Platforms @('linux/amd64')`.
 
+### Production deployment
+
+[`docker-compose.prod.yml`](docker-compose.prod.yml) runs the published image (rather than building from source, like [`docker-compose.yml`](docker-compose.yml) does for local dev) and is configured entirely through a `.env` file:
+
+```bash
+cp .env.example .env
+# edit .env: pin IMAGE_TAG to a specific release instead of `latest` for a repeatable deployment
+docker compose -f docker-compose.prod.yml up -d
+```
+
+As with the dev compose file, put your own reverse proxy in front of it for TLS — still-here itself only serves plain HTTP.
+
 ## Development
 
 ```bash
