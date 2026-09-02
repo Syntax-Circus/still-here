@@ -7,6 +7,8 @@ keys/
 !.env.example
 .env.local
 
+local/
+
 # AspNetCore.SassCompiler output -- compiled at build time from wwwroot/scss
 src/StillHere.Web/wwwroot/css/
 
@@ -24,6 +26,9 @@ src/StillHere.Web/wwwroot/css/
 *.user
 *.userosscache
 *.sln.docstates
+
+# User-specific files (CodeRush)
+.cr/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

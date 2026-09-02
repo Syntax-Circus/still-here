@@ -2,7 +2,7 @@
 
 *A [Syntax Circus](https://www.syntaxcircus.com) project*
 
-still-here is a self-hosted Dynamic DNS manager: a single Docker container that watches your public IP and pushes updates to your domains' DNS providers (Namecheap in v1), with a full audit log and configurable notifications. It's built for anyone running several personal domains against a home connection with a non-static public IP who wants one dashboard instead of a pile of separate DDNS client configs.
+still-here is a self-hosted Dynamic DNS manager: a single Docker container that watches your public IP and pushes updates to your domains' DNS providers (Namecheap in v1), with a full audit log and configurable notifications. It's built for anyone running several personal domains against a connection with a non-static public IP who wants one dashboard instead of a pile of separate DDNS client configs.
 
 ## Features
 
@@ -42,6 +42,8 @@ still-here serves plain HTTP inside the container. Put your own reverse proxy (C
 dotnet build
 dotnet test
 ```
+
+Copy [`src/StillHere.Web/.env.example`](src/StillHere.Web/.env.example) to `.env.local` in that same folder to override the database path, data-protection keys path, scheduler intervals, or logging settings for your local run — it's loaded automatically outside a container. Without it, `dotnet run`/Visual Studio use the relative defaults baked into `appsettings.json` (`stillhere.db`, `keys/`, `logs/`), all in `src/StillHere.Web/`.
 
 The [docs/](docs/) directory has the complete design history — [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) for scope and requirements, [docs/architecture/00-DISCOVERY-INDEX.md](docs/architecture/00-DISCOVERY-INDEX.md) for the architecture discovery index.
 

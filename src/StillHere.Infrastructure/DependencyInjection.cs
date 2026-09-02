@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,8 @@ public static class DependencyInjection
 
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing required connection string 'ConnectionStrings:Default'.");
+
+        EnsureSqliteDataSourceDirectoryExists(connectionString);
 
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
@@ -114,5 +117,26 @@ public static class DependencyInjection
             sp.GetRequiredService<ILogger<AuditLogRetentionScheduler>>()));
 
         return services;
+    }
+
+    // SQLite refuses to create the database file's parent directory itself -- opening a
+    // "Data Source" pointed at a not-yet-existing folder (e.g. a ConnectionStrings:Default
+    // override to a fresh path) fails with "SQLite Error 14: unable to open database file"
+    // instead of just creating it.
+    private static void EnsureSqliteDataSourceDirectoryExists(string connectionString)
+    {
+        var dataSource = new SqliteConnectionStringBuilder(connectionString).DataSource;
+
+        if (string.IsNullOrEmpty(dataSource) || dataSource.Equals(":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
     }
 }
