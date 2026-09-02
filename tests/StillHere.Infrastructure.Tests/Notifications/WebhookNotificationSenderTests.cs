@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Shouldly;
 using StillHere.Application.Features.Notifications;
 using StillHere.Infrastructure.Notifications;
@@ -108,6 +109,42 @@ public sealed class WebhookNotificationSenderTests
         var result = await sender.SendAsync(channel, Context, TestContext.Current.CancellationToken);
 
         result.Success.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("POST ")]
+    [InlineData("GET/POST")]
+    public async Task SendAsync_MalformedHttpMethod_ReturnsFailedResultWithoutThrowing(string malformedHttpMethod)
+    {
+        var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        var sender = CreateSender(handler);
+        var channel = CreateChannel(url: "https://hooks.example.com/notify", httpMethod: malformedHttpMethod, bodyTemplate: null);
+
+        var result = await sender.SendAsync(channel, Context, TestContext.Current.CancellationToken);
+
+        result.Success.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SendAsync_NullBodyTemplateAndMessageWithQuotesAndBackslashes_ProducesValidEscapedJson()
+    {
+        string? capturedBody = null;
+        var handler = new StubHttpMessageHandler(async request =>
+        {
+            capturedBody = request.Content is null ? null : await request.Content.ReadAsStringAsync();
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var sender = CreateSender(handler);
+        var channel = CreateChannel(url: "https://hooks.example.com/notify", httpMethod: "POST", bodyTemplate: null);
+        const string messageWithSpecialChars = """Update failed: invalid response "<errors><error>Bad\Request</error></errors>" received""";
+        var context = new NotificationEventContext("example.com", "1.2.3.4", "5.6.7.8", "Failure", messageWithSpecialChars);
+
+        var result = await sender.SendAsync(channel, context, TestContext.Current.CancellationToken);
+
+        result.Success.ShouldBeTrue();
+        capturedBody.ShouldNotBeNull();
+        using var parsedBody = JsonDocument.Parse(capturedBody!);
+        parsedBody.RootElement.GetProperty("message").GetString().ShouldBe(messageWithSpecialChars);
     }
 
     private static WebhookNotificationSender CreateSender(HttpMessageHandler handler) =>

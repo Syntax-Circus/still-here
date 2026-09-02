@@ -17,25 +17,36 @@ internal sealed partial class NotificationDispatcher(
 {
     public async Task DispatchAsync(NotificationTrigger trigger, NotificationEventContext context, CancellationToken cancellationToken)
     {
-        var enabled = await channels.ListEnabledAsync(cancellationToken);
-
-        var matching = enabled.Where(channel => TriggerMatches(channel, trigger));
-
-        foreach (var channel in matching)
+        try
         {
-            try
-            {
-                var result = await senders.GetByType(channel.Type).SendAsync(channel, context, cancellationToken);
+            var enabled = await channels.ListEnabledAsync(cancellationToken);
 
-                if (!result.Success)
+            var matching = enabled.Where(channel => TriggerMatches(channel, trigger));
+
+            foreach (var channel in matching)
+            {
+                try
                 {
-                    LogNotificationSendFailed(logger, channel.Id, channel.Name, result.Message);
+                    var result = await senders.GetByType(channel.Type).SendAsync(channel, context, cancellationToken);
+
+                    if (!result.Success)
+                    {
+                        LogNotificationSendFailed(logger, channel.Id, channel.Name, result.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogNotificationSendThrew(logger, ex, channel.Id, channel.Name);
                 }
             }
-            catch (Exception ex)
-            {
-                LogNotificationSendThrew(logger, ex, channel.Id, channel.Name);
-            }
+        }
+        catch (Exception ex)
+        {
+            // Notifications are best-effort and must never affect the check flow -- even a failure
+            // to list channels (e.g. a transient SQLite error) must not propagate out of here, since
+            // callers such as RunScheduledDomainCheckHandler have no try/catch of their own around
+            // DispatchAsync.
+            LogNotificationDispatchThrew(logger, ex, trigger);
         }
     }
 
@@ -55,7 +66,17 @@ internal sealed partial class NotificationDispatcher(
             return NotificationSendResult.Failed($"No notification sender available for channel type '{channel.Type}': {ex.Message}");
         }
 
-        return await sender.SendAsync(channel, context, cancellationToken);
+        try
+        {
+            return await sender.SendAsync(channel, context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // A sender's own catch-all-at-the-boundary convention should already prevent this, but
+            // SendTestAsync must never let an exception escape under any circumstance -- unlike
+            // DispatchAsync's fire-and-forget loop, this result is surfaced directly to the UI.
+            return NotificationSendResult.Failed($"Test-send failed: {ex.Message}");
+        }
     }
 
     private static bool TriggerMatches(NotificationChannelDto channel, NotificationTrigger trigger) => trigger switch
@@ -71,4 +92,7 @@ internal sealed partial class NotificationDispatcher(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Notification send threw for channel {ChannelId} ({ChannelName}).")]
     private static partial void LogNotificationSendThrew(ILogger logger, Exception ex, int channelId, string channelName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification dispatch threw while listing channels for trigger {Trigger}.")]
+    private static partial void LogNotificationDispatchThrew(ILogger logger, Exception ex, NotificationTrigger trigger);
 }

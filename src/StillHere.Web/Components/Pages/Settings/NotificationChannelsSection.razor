@@ -90,10 +90,14 @@ else
 
             <div class="mb-3">
                 <label class="form-label" for="channelType">Type</label>
-                <InputSelect id="channelType" class="form-select" @bind-Value="_formViewModel.Type">
+                <InputSelect id="channelType" class="form-select" disabled="@(_editingChannelId is not null)" @bind-Value="_formViewModel.Type">
                     <option value="@NotificationChannelType.Webhook">Webhook</option>
                     <option value="@NotificationChannelType.Email">Email</option>
                 </InputSelect>
+                @if (_editingChannelId is not null)
+                {
+                    <p class="form-text field-hint">A channel's type cannot be changed after creation.</p>
+                }
             </div>
 
             <div class="form-check mb-3">

@@ -78,6 +78,26 @@ public sealed class UpdateNotificationChannelRequestHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_TypeDiffersFromExisting_ReturnsValidationErrorAndDoesNotUpdate()
+    {
+        _notificationChannels.FindByIdAsync(1, Arg.Any<CancellationToken>()).Returns(ExistingWebhook);
+
+        var result = await _handler.HandleAsync(
+            ValidWebhookRequest() with { Type = NotificationChannelType.Email }, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Errors[0].Code.ShouldBe("channel-type-immutable");
+        result.Errors[0].Kind.ShouldBe(ResultErrorKind.Validation);
+        await _notificationChannels.DidNotReceive().UpdateAsync(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<bool>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<bool>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<bool>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task HandleAsync_MissingName_ReturnsValidationError()
     {
         _notificationChannels.FindByIdAsync(1, Arg.Any<CancellationToken>()).Returns(ExistingWebhook);

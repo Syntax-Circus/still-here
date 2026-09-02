@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using StillHere.Application.Features.Notifications;
 
 namespace StillHere.Infrastructure.Notifications;
@@ -12,9 +13,6 @@ namespace StillHere.Infrastructure.Notifications;
 /// </summary>
 internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotificationSender
 {
-    private const string DefaultBodyTemplate =
-        """{"domain":"{domain}","oldIp":"{oldIp}","newIp":"{newIp}","status":"{status}","message":"{message}"}""";
-
     public NotificationChannelType ChannelType => NotificationChannelType.Webhook;
 
     public async Task<NotificationSendResult> SendAsync(
@@ -25,7 +23,24 @@ internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotifi
 
         try
         {
-            var body = NotificationTemplateSubstitutor.Substitute(channel.BodyTemplate ?? DefaultBodyTemplate, context);
+            // channel.BodyTemplate is null when the admin hasn't authored a custom template, so the
+            // sender's own default applies. That default is serialized straight from the event
+            // context -- never through NotificationTemplateSubstitutor's bare string.Replace chain --
+            // because context.Message can carry untrusted-ish third-party text (e.g. a provider's raw
+            // error XML) containing quotes/backslashes/newlines that would otherwise produce
+            // malformed JSON. An admin-authored custom BodyTemplate is still run through the
+            // substitutor: the admin controls that template (and its escaping) and may be targeting a
+            // non-JSON payload shape entirely.
+            var body = channel.BodyTemplate is null
+                ? JsonSerializer.Serialize(new
+                {
+                    domain = context.DomainName,
+                    oldIp = context.OldIp ?? "",
+                    newIp = context.NewIp ?? "",
+                    status = context.Status,
+                    message = context.Message,
+                })
+                : NotificationTemplateSubstitutor.Substitute(channel.BodyTemplate, context);
 
             var httpMethod = string.IsNullOrWhiteSpace(channel.HttpMethod) ? "POST" : channel.HttpMethod;
 
@@ -48,10 +63,13 @@ internal sealed class WebhookNotificationSender(HttpClient httpClient) : INotifi
         {
             return NotificationSendResult.Failed($"Webhook request timed out: {ex.Message}");
         }
-        catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or ArgumentException)
+        catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or ArgumentException or FormatException)
         {
-            // Malformed/missing channel.Url or channel.HttpMethod fails request construction or URI
-            // resolution (no BaseAddress is configured on this HttpClient) -- matches
+            // Malformed/missing channel.Url fails URI resolution (no BaseAddress is configured on
+            // this HttpClient); malformed channel.HttpMethod (e.g. a trailing space or embedded
+            // whitespace) fails `new HttpMethod(...)` construction with a plain FormatException --
+            // note UriFormatException derives from FormatException but catching the derived type
+            // does not also catch the base type, so both must be listed explicitly. Matches
             // NamecheapDnsProvider's catch-all-at-the-boundary convention: never let an exception
             // escape SendAsync.
             return NotificationSendResult.Failed($"Invalid webhook configuration: {ex.Message}");

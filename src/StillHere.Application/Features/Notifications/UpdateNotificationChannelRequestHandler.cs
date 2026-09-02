@@ -48,6 +48,15 @@ public sealed class UpdateNotificationChannelRequestHandler(
                 "notification-channel-not-found", "Notification channel not found.", ResultErrorKind.NotFound));
         }
 
+        if (request.Type != existing.Type)
+        {
+            return Result<NotificationChannelDto>.Failure(new ResultError(
+                "channel-type-immutable",
+                "A notification channel's type cannot be changed after creation.",
+                ResultErrorKind.Validation,
+                nameof(request.Type)));
+        }
+
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             return Result<NotificationChannelDto>.Failure(new ResultError(
