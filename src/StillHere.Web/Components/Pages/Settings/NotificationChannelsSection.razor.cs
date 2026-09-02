@@ -17,6 +17,9 @@ public partial class NotificationChannelsSection
     [Inject]
     private IDeleteNotificationChannelRequestHandler DeleteHandler { get; set; } = default!;
 
+    [Inject]
+    private ITestNotificationChannelRequestHandler TestHandler { get; set; } = default!;
+
     private IReadOnlyList<NotificationChannelDto> _channels = [];
     private bool _isLoading = true;
     private List<string> _errorMessages = [];
@@ -28,6 +31,9 @@ public partial class NotificationChannelsSection
     private bool _isSubmitting;
 
     private int? _confirmingDeleteId;
+
+    private readonly HashSet<int> _testingChannelIds = [];
+    private readonly Dictionary<int, (bool Success, string Message)> _testResultsByChannelId = [];
 
     protected override Task OnInitializedAsync() => LoadChannelsAsync();
 
@@ -151,6 +157,30 @@ public partial class NotificationChannelsSection
 
         _successMessage = "Channel deleted.";
         await LoadChannelsAsync();
+    }
+
+    private bool IsTesting(int channelId) => _testingChannelIds.Contains(channelId);
+
+    private (bool Success, string Message)? GetTestResult(int channelId) =>
+        _testResultsByChannelId.TryGetValue(channelId, out var result) ? result : null;
+
+    private async Task HandleTestAsync(int channelId)
+    {
+        _testingChannelIds.Add(channelId);
+        _testResultsByChannelId.Remove(channelId);
+
+        try
+        {
+            var result = await TestHandler.HandleAsync(new TestNotificationChannelRequest(channelId), CancellationToken.None);
+
+            _testResultsByChannelId[channelId] = result.IsFailure
+                ? (false, result.Errors[0].Message)
+                : (true, "Test notification sent successfully.");
+        }
+        finally
+        {
+            _testingChannelIds.Remove(channelId);
+        }
     }
 
     private static string FormatTriggers(NotificationChannelDto channel)

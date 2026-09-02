@@ -59,6 +59,16 @@ else
                                 {
                                     <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ShowEditForm(channel)">Edit</button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(channel.Id)">Delete</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@IsTesting(channel.Id)" @onclick="() => HandleTestAsync(channel.Id)">
+                                        @(IsTesting(channel.Id) ? "Testing…" : "Test")
+                                    </button>
+                                }
+                                @{
+                                    var testResult = GetTestResult(channel.Id);
+                                }
+                                @if (testResult is not null)
+                                {
+                                    <div class="@(testResult.Value.Success ? "text-success" : "text-danger")">@testResult.Value.Message</div>
                                 }
                             </td>
                         </tr>
