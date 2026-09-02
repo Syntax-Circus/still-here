@@ -35,7 +35,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -102,3 +102,17 @@ jobs:
             BUILD_INFORMATIONAL_VERSION=${{ steps.gitversion.outputs.informationalversion }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag published version
+        run: |
+          tag="v${{ steps.gitversion.outputs.semver }}"
+
+          if git ls-remote --tags origin "refs/tags/$tag" | grep -q .; then
+            echo "Tag $tag already exists on origin."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$tag" "$GITHUB_SHA"
+          git push origin "$tag"
