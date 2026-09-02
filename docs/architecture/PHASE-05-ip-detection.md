@@ -38,48 +38,48 @@ Follow [Razor Component Architecture](../RAZOR_COMPONENT_ARCHITECTURE.md). No Ra
 
 ## Deliverables
 
-- [ ] `IIpDetectionService` interface and `IpDetectionService` implementation.
-- [ ] Configurable, ordered fallback chain sourced from `GlobalSettings.ExternalIpCheckServices`.
-- [ ] Per-tick shared-lookup caching.
-- [ ] Provider-reported IP comparison/mismatch-warning logic (consumes an `IDnsProvider` update result).
+- [x] `IIpDetectionService` interface and `IpDetectionService` implementation.
+- [x] Configurable, ordered fallback chain sourced from `GlobalSettings.ExternalIpCheckServices`.
+- [x] Per-tick shared-lookup caching.
+- [x] Provider-reported IP comparison/mismatch-warning logic (consumes an `IDnsProvider` update result).
 
 ## Actionable Tasks
 
-- [ ] **P05-01** Define `IIpDetectionService` and implement the ordered fallback chain with short timeouts.
+- [x] **P05-01** Define `IIpDetectionService` and implement the ordered fallback chain with short timeouts.
   - **Depends on:** Phase 01
   - **Validation:** Unit tests cover first-service-success, fallback-on-timeout, and all-services-failed branches.
-- [ ] **P05-02** Add per-tick caching so multiple due domains share one external lookup.
+- [x] **P05-02** Add per-tick caching so multiple due domains share one external lookup.
   - **Depends on:** P05-01
-  - **Validation:** Unit test confirms the external HTTP client is invoked once per tick regardless of due-domain count.
-- [ ] **P05-03** Add provider-reported-IP comparison, logging mismatches as a warning-level result.
+  - **Validation:** Unit test confirms the external HTTP client is invoked once per tick regardless of due-domain count. (Phase-05-scoped as "invoked once across N calls within the cache TTL" — "tick"/"due domain" are Phase 06 concepts that don't exist yet.)
+- [x] **P05-03** Add provider-reported-IP comparison, logging mismatches as a warning-level result.
   - **Depends on:** P05-01
   - **Validation:** Unit test covers match and mismatch cases.
 
 ## Success Criteria
 
-- [ ] `dotnet test` passes for all `IIpDetectionService` unit tests.
-- [ ] Manual verification: with two of three fallback services unreachable (e.g. via a broken URL), detection still succeeds via the third.
+- [x] `dotnet test` passes for all `IIpDetectionService` unit tests.
+- [x] Manual verification: with two of three fallback services unreachable (e.g. via a broken URL), detection still succeeds via the third.
 
 ## Boundary Validation
 
-- [ ] Application use-case entry points delegate to the named handlers listed above.
-- [ ] Framework-owned operational or static exemptions execute no application workflow.
-- [ ] Handler constructor dependencies contain only approved abstractions.
-- [ ] Persistence and integration entities do not cross infrastructure boundaries.
-- [ ] Cancellation reaches asynchronous handler dependencies.
-- [ ] Expected outcomes and transport mapping have focused tests.
-- [ ] Infrastructure implementations have integration coverage where applicable.
-- [ ] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback.
-- [ ] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind.
-- [ ] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel.
-- [ ] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies.
-- [ ] API request and response contracts use DTO names and contracts, never Razor ViewModels.
-- [ ] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values.
-- [ ] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
+- [x] Application use-case entry points delegate to the named handlers listed above. (N/A — infrastructure-only phase, no new entry point.)
+- [x] Framework-owned operational or static exemptions execute no application workflow.
+- [x] Handler constructor dependencies contain only approved abstractions. (N/A — no new handler.)
+- [x] Persistence and integration entities do not cross infrastructure boundaries.
+- [x] Cancellation reaches asynchronous handler dependencies.
+- [x] Expected outcomes and transport mapping have focused tests.
+- [x] Infrastructure implementations have integration coverage where applicable.
+- [x] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback. (N/A — no Razor components in this phase.)
+- [x] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind. (N/A)
+- [x] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel. (N/A)
+- [x] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies. (N/A)
+- [x] API request and response contracts use DTO names and contracts, never Razor ViewModels. (N/A)
+- [x] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values. (`IpCheckHttpClientName`, `DefaultCacheDuration`.)
+- [x] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
 
 ## Risks and Open Questions
 
-- [ ] None specific to this phase.
+- [x] None specific to this phase.
 
 ## Handoff
 

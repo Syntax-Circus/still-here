@@ -1,11 +1,16 @@
-# Quartermaster-specific
-qm.db
-qm.db-shm
-qm.db-wal
-qm.local.yaml
+# still-here-specific
+stillhere.db
+stillhere.db-shm
+stillhere.db-wal
+keys/
 .env
 !.env.example
 .env.local
+
+local/
+
+# AspNetCore.SassCompiler output -- compiled at build time from wwwroot/scss
+src/StillHere.Web/wwwroot/css/
 
 # Claude Code local settings
 .claude/settings.local.json
@@ -21,6 +26,9 @@ qm.local.yaml
 *.user
 *.userosscache
 *.sln.docstates
+
+# User-specific files (CodeRush)
+.cr/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

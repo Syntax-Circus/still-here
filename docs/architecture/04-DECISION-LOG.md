@@ -112,3 +112,168 @@ Not applicable — this decision *adopts* the mandatory pattern rather than devi
 
 - **Approved by:** Project owner
 - **Approved on:** 2026-09-01
+
+---
+
+## Decision 4: ASP.NET Core Data Protection Instead of SyntaxCircus.Credentials
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [03-PACKAGE-MAP.md](03-PACKAGE-MAP.md), [PHASE-04-domain-management-ui.md](PHASE-04-domain-management-ui.md), [PROJECT_BRIEF.md](../PROJECT_BRIEF.md)
+
+### Context
+
+Earlier planning (`03-PACKAGE-MAP.md`, `PHASE-04-domain-management-ui.md`, `PROJECT_BRIEF.md`) assumed `SyntaxCircus.Credentials` provides an `ICredentialProtector`-style server-side encryption API for encrypting `DnsProviderCredential.EncryptedSecrets` at rest. Reading its actual v0.1.1 source during Phase 04 implementation showed this is wrong: its only interface is `ICredentialStore` (`GetAsync`/`SetAsync`/`DeleteAsync`/`ExistsAsync` keyed by `(serviceId, accountId)`), backed by the Windows Credential Manager, macOS Keychain, or a Linux `secret-tool` D-Bus service — a desktop OS credential vault, not a database-column encryption library. There is no `ICredentialProtector`, no purpose-string API, and no relationship to ASP.NET Core Data Protection. Its own usage guide states it is "not... a server secret store." A headless Docker container (still-here's deployment target) has no OS keychain, and the package's Linux fallback (`EncryptedFileCredentialStore`) is explicitly disclaimed in its own docs as "not a substitute for a hardened OS keychain" and "not a server secret store."
+
+### Decision
+
+Back `ICredentialProtector` (the name every doc already used) with `Microsoft.AspNetCore.DataProtection` instead — the framework's own built-in mechanism for exactly this need, already registered in `Program.cs` (`AddDataProtection().PersistKeysToFileSystem(...)`) for the auth cookie. No new package is needed. `CredentialProtector` wraps `IDataProtectionProvider.CreateProtector("StillHere.DnsProviderCredentials")`, a distinct purpose string giving real cryptographic isolation from future secret categories (e.g. SMTP passwords in Phase 08).
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — `ICredentialProtector` still lives in `StillHere.Application` with its implementation in `StillHere.Infrastructure`, matching the mandatory abstraction/implementation split. This is a package-selection correction, not a rule deviation.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `SyntaxCircus.Credentials` moves from Selected to Excluded in [03-PACKAGE-MAP.md](03-PACKAGE-MAP.md); `Microsoft.AspNetCore.DataProtection` is documented as the credential-encryption mechanism instead.
+- **Consequences:** No new package dependency (Data Protection already ships with the ASP.NET Core shared framework); one fewer external package to track; encryption keys already persisted to the container's mounted volume via the existing `PersistKeysToFileSystem` configuration.
+- **Approval:** Project owner, 2026-09-01 (retroactive — corrects a planning-time misunderstanding discovered during implementation).
+- **Disposition:** Permanent; `SyntaxCircus.Credentials` would only become relevant again if still-here grew a desktop-client component.
+
+### Alternatives Considered
+
+- `SyntaxCircus.Credentials` as originally planned — rejected: not applicable to a server-side/headless deployment; would require an OS keychain still-here's Docker container doesn't have.
+
+### Consequences
+
+- Positive: uses a framework mechanism already wired into the app; no new package surface to learn or version; the package map's package-count stays lower.
+- Negative: the SyntaxCircus catalog's cross-project consistency benefit (using the same credential package everywhere) doesn't apply here, since the catalog package solves a different problem than the one this app has.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01
+
+---
+
+## Decision 5: Split Scoped `IpDetectionService` / Singleton `IpDetectionCache`
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [02-ARCHITECTURE.md](02-ARCHITECTURE.md), [PHASE-05-ip-detection.md](PHASE-05-ip-detection.md)
+
+### Context
+
+`PHASE-05-ip-detection.md` requires one external IP lookup to be shared across all due domains within a scheduler tick, and reused by a "check now" call that lands shortly after (FR-13). `IpDetectionService` needs `AppDbContext` (registered `Scoped` by `AddDbContext`) to read `GlobalSettings.ExternalIpCheckServices`, so it must itself be registered `Scoped` — but a cache that only lives as long as one scope can't be shared across ticks/due-domains regardless of how Phase 06's scheduler shapes its DI scopes (still undecided as of this phase).
+
+### Decision
+
+Split the cache into its own class, `IpDetectionCache` (semaphore-guarded, 25s TTL), registered `Singleton` and injected into the `Scoped` `IpDetectionService`. A `Singleton` cannot hold a `Scoped` dependency directly (captive-dependency error), so the cache is deliberately kept free of any `AppDbContext`/EF dependency — it only ever sees the already-resolved `IpDetectionResult` its caller passes it. Only successful lookups are cached; a failed detection is not, so a transient blip on one attempt doesn't force every other caller in the same window to also fail without retrying.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — both classes stay within `StillHere.Infrastructure`, and `IIpDetectionService`'s public contract (Application-facing) is unaffected by this internal lifetime split.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Infrastructure/IpDetection/` only.
+- **Consequences:** The cache correctly outlives any single DI scope regardless of Phase 06's eventual scheduler-scoping design; adds one extra registered singleton and one extra class versus a simpler (but incorrect for a `Scoped` service) single-class design.
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent, unless a future phase moves `GlobalSettings` reads off `AppDbContext` entirely (e.g. a config-reload service), at which point `IpDetectionService` could itself become `Singleton` and the split could be collapsed.
+
+### Alternatives Considered
+
+- A single `Singleton` `IpDetectionService` holding `IDbContextFactory<AppDbContext>` instead of `AppDbContext` directly — rejected: no other infrastructure component in this codebase uses `IDbContextFactory`, and introducing it for one class would be inconsistent with the established `AppDbContext`-injection convention (`ManagedDomainRepository`, `AdminUserRepository`) for no benefit beyond what the simpler split already achieves.
+
+### Consequences
+
+- Positive: correct cross-scope cache sharing with no dependency on how Phase 06 shapes its scheduler's DI scopes; the cache is trivially unit-testable in isolation (no DB/HTTP setup needed).
+- Negative: one more moving part (two classes instead of one) for what is conceptually a single service.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01
+
+---
+
+## Decision 6: `IServiceScopeFactory`-per-tick-scope for the Singleton `DomainCheckScheduler`
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [PHASE-06-scheduler.md](PHASE-06-scheduler.md)
+
+### Context
+
+`PHASE-06-scheduler.md`'s original Architecture Decision stated that "the scheduler constructor-injects its handler dependency." `DomainCheckScheduler` is a singleton-lifetime `BackgroundService`; its handlers (`IListDueDomainsHandler`, `IRunScheduledDomainCheckHandler`) transitively depend on `IManagedDomainRepository` → `AppDbContext`, which is `Scoped`. Directly constructor-injecting a `Scoped` dependency into a `Singleton` is a captive-dependency error that fails DI scope validation in Development (`ServiceProviderOptions.ValidateScopes`) — the literal original wording would have produced a real bug, not just a style deviation. This is the same class of problem Decision 5 solved for `IpDetectionService`/`IpDetectionCache`, with higher stakes here since the naive reading is outright broken rather than merely suboptimal.
+
+### Decision
+
+Constructor-inject `IServiceScopeFactory` instead of the handler. Each tick (`DomainCheckScheduler.RunTickAsync`) creates one `IServiceScope`, resolves `IListDueDomainsHandler` and `IRunScheduledDomainCheckHandler` from it, uses them for every due domain in that tick, and disposes the scope at tick end. Confirmed against real precedent in the sibling repo `cmsify`'s `ScheduledPublishingService` (`BackgroundServices/ScheduledPublishingService.cs`), which uses the identical `IServiceScopeFactory`-per-unit-of-work shape for the same reason.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — still satisfies `APPLICATION_ARCHITECTURE.md`'s "host types without per-method DI... keep constructor injection" rule. `IServiceScopeFactory` *is* what's constructor-injected; per-tick scope resolution is the closest hosted-service analogue to per-method DI, since a `BackgroundService` has no per-invocation parameter injection to hook into.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Infrastructure/Scheduling/DomainCheckScheduler.cs` only.
+- **Consequences:** Correct DI lifetime handling, passes scope validation in Development; one scope is reused across every due domain in a tick (not one scope per domain, unlike `cmsify`'s lease-based multi-worker design) since this app has a single scheduler instance and ~12 domains — per-domain failure isolation is achieved by a `try`/`catch` around each domain's check, not by scope isolation.
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent pattern for any future singleton-hosted-service-needing-scoped-work case in this codebase.
+
+### Alternatives Considered
+
+- Constructor-injecting the handler directly, as originally documented — rejected: a real captive-dependency bug, not a viable alternative.
+- One `IServiceScope` per due domain (mirroring `cmsify` exactly) — rejected as unnecessary overhead at this app's scale (single scheduler instance, ~12 domains); the shared-scope approach still isolates per-domain failures via `try`/`catch`.
+
+### Consequences
+
+- Positive: correct, bug-free DI lifetime handling; matches a proven pattern from a sibling repo rather than an invented one.
+- Negative: `DomainCheckScheduler`'s tick logic is one level more indirect (scope creation + service resolution) than a direct constructor-injected call would have been, had that been valid.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01
+
+---
+
+## Decision 7: Separate SMTP Credential Protector
+
+- **Status:** Accepted
+- **Date:** 2026-09-01
+- **Owner:** Project owner
+- **Related artifacts:** [02-ARCHITECTURE.md](02-ARCHITECTURE.md), [PHASE-08-notifications.md](PHASE-08-notifications.md), Decision 4
+
+### Context
+
+Phase 08 (Notifications) requires a second credential-encryption abstraction for protecting SMTP passwords, used by the email notification sender. Decision 4 established `ICredentialProtector` for DNS provider credentials using the purpose string `"StillHere.DnsProviderCredentials"`. Phase 08 now needs to protect SMTP passwords with cryptographic isolation from DNS credentials — separate purpose strings guarantee that a key compromise for one category does not expose the other.
+
+### Decision
+
+Create a second, parallel narrow interface `ISmtpCredentialProtector` (`Protect`/`Unprotect` methods) backed by `Microsoft.AspNetCore.DataProtection` with the purpose string `"StillHere.SmtpCredentials"`. This mirrors `ICredentialProtector`'s implementation pattern exactly, with only the purpose string differing. Register both as singletons in DependencyInjection.cs.
+
+### Boundary Deviation Details
+
+Not a boundary-pattern deviation — `ISmtpCredentialProtector` lives in `StillHere.Application` with its implementation in `StillHere.Infrastructure`, matching the mandatory abstraction/implementation split. This extends Decision 4's credential-protection pattern to a second secret category; no architectural deviation is involved.
+
+- **Violated rule:** None.
+- **Exact affected scope:** `src/StillHere.Application/Security/ISmtpCredentialProtector.cs` (interface), `src/StillHere.Infrastructure/Security/SmtpCredentialProtector.cs` (implementation), tests, and DI registration in `DependencyInjection.cs`.
+- **Consequences:** Two narrow interfaces instead of one parameterized `Protect(purpose, plaintext)` method, consistent with this codebase's established anti-generic-abstraction stance (see the handler-per-use-case pattern in Decision 3 and throughout `02-ARCHITECTURE.md`).
+- **Approval:** Project owner, 2026-09-01.
+- **Disposition:** Permanent; future credential categories (e.g. API keys, other secrets) would follow the same pattern, each with its own narrow interface and purpose string.
+
+### Alternatives Considered
+
+- A single parameterized interface (`Protect(purpose, plaintext)`) shared by both DNS and SMTP credentials — rejected: adds a generic method parameter where the codebase convention is narrow, single-purpose interfaces (see Decision 3's handler-per-use-case rationale); the per-category interface approach is consistent with the established anti-generic-abstraction stance.
+
+### Consequences
+
+- Positive: cryptographic isolation of SMTP passwords from DNS credentials; consistency with the handler-per-use-case pattern established in Decision 3; simple, mechanical implementation (no new concepts or dependencies).
+- Negative: two classes instead of one parameterized class; slightly higher boilerplate in DependencyInjection.cs.
+
+### Approval
+
+- **Approved by:** Project owner
+- **Approved on:** 2026-09-01

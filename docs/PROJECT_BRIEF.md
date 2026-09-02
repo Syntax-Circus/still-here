@@ -86,13 +86,13 @@ against project needs and package boundaries.
 - **Database:** SQLite — deviates from the template's Postgres sample default; see `docs/architecture/04-DECISION-LOG.md` #1.
 - **Authentication:** Custom single-admin cookie auth — deviates from the template's OAuth/Authentik sample default; see `docs/architecture/04-DECISION-LOG.md` #2.
 - **Logging:** Serilog, via `SyntaxCircus.AspNetCore.Serilog`.
-- **Testing:** xUnit + Shouldly + NSubstitute.
+- **Testing:** xunit.v3 (Microsoft Testing Platform) + Shouldly + NSubstitute.
 - **Styling/design system:** Bootstrap 5 (template default).
-- **Configuration/secrets:** `.env`/`.env.local` for dev via `SyntaxCircus.DotEnv`; ASP.NET Data Protection API + `SyntaxCircus.Credentials` for provider secrets at rest in production.
-- **Syntax Circus packages to consider:** `SyntaxCircus.Common`, `SyntaxCircus.AspNetCore.Serilog`, `SyntaxCircus.Http.Resilience`, `SyntaxCircus.Email`, `SyntaxCircus.Credentials`, `SyntaxCircus.Blazor.Components`, `SyntaxCircus.DotEnv` — see `docs/architecture/03-PACKAGE-MAP.md` for the full selection with statuses.
+- **Configuration/secrets:** `.env`/`.env.local` for dev via `SyntaxCircus.DotEnv`; ASP.NET Core Data Protection API (`ICredentialProtector`) for provider secrets at rest in production — `SyntaxCircus.Credentials` was considered but excluded, since it's a desktop OS credential vault, not a server-side encryption library (see `docs/architecture/04-DECISION-LOG.md` #4).
+- **Syntax Circus packages to consider:** `SyntaxCircus.Common`, `SyntaxCircus.AspNetCore.Serilog`, `SyntaxCircus.Http.Resilience`, `SyntaxCircus.Email`, `SyntaxCircus.Blazor.Components`, `SyntaxCircus.DotEnv` — see `docs/architecture/03-PACKAGE-MAP.md` for the full selection with statuses.
 
 ## Open Questions
 
 - [ ] Exact Namecheap DDNS response XML fields to parse for provider-reported IP — verify against Namecheap's current docs during Phase 03.
 - [ ] Should "check now" be rate-limited to prevent accidental repeated-click hammering of the provider API?
-- [ ] Final choice of password hasher: ASP.NET Identity's `PasswordHasher<T>` (used standalone) vs. BCrypt.Net.
+- [x] Final choice of password hasher: ASP.NET Identity's `PasswordHasher<T>` (used standalone), resolved in Phase 02 — see `docs/architecture/02-ARCHITECTURE.md § Authentication and Authorization`.

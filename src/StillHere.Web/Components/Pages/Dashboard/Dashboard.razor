@@ -1,0 +1,65 @@
+@page "/"
+@rendermode InteractiveServer
+@using StillHere.Web.Components.Shared
+
+<PageTitle>still-here</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Dashboard</h1>
+    <a class="btn btn-primary" href="/domains/add">Add domain</a>
+</div>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_isLoading)
+{
+    <p>Loading…</p>
+}
+else if (_rows.Count == 0)
+{
+    <p class="text-muted">No domains yet. <a href="/domains/add">Add your first domain</a> to get started.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Host</th>
+                    <th>Provider</th>
+                    <th>Status</th>
+                    <th>Last known IP</th>
+                    <th>Last checked</th>
+                    <th>Enabled</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr>
+                        <td><a href="@($"/domains/{row.Id}/history")">@row.DomainName</a></td>
+                        <td>@row.Host</td>
+                        <td>@row.ProviderKey</td>
+                        <td><StatusBadge Status="row.Status" /></td>
+                        <td>@row.LastKnownIpDisplay</td>
+                        <td>@row.LastCheckedDisplay</td>
+                        <td>
+                            <input type="checkbox" class="form-check-input" checked="@row.Enabled"
+                                   @onchange="e => HandleToggleEnabledAsync(row, (bool)e.Value!)" />
+                        </td>
+                        <td class="text-nowrap">
+                            <CheckNowButton IsChecking="_checkingDomainIds.Contains(row.Id)"
+                                            OnCheckNow="() => HandleCheckNowAsync(row.Id)" />
+                            <a class="btn btn-sm btn-outline-secondary" href="@($"/domains/{row.Id}/edit")">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

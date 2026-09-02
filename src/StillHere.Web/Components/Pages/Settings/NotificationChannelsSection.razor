@@ -1,0 +1,190 @@
+@using StillHere.Application.Features.Notifications
+
+<h2>Notification channels</h2>
+
+@if (_errorMessages.Count > 0)
+{
+    <ul class="alert alert-danger form-errors" role="alert">
+        @foreach (var message in _errorMessages)
+        {
+            <li>@message</li>
+        }
+    </ul>
+}
+
+@if (_successMessage is not null)
+{
+    <div class="alert alert-success" role="alert">@_successMessage</div>
+}
+
+@if (_isLoading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    @if (_channels.Count == 0)
+    {
+        <p class="text-muted">No notification channels yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Enabled</th>
+                        <th>Triggers</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var channel in _channels)
+                    {
+                        <tr>
+                            <td>@channel.Name</td>
+                            <td>@channel.Type</td>
+                            <td>@(channel.Enabled ? "Yes" : "No")</td>
+                            <td>@FormatTriggers(channel)</td>
+                            <td class="text-nowrap">
+                                @if (_confirmingDeleteId == channel.Id)
+                                {
+                                    <span>Delete this channel?</span>
+                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => HandleDeleteAsync(channel.Id)">Confirm</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelDelete">Cancel</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ShowEditForm(channel)">Edit</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(channel.Id)">Delete</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@IsTesting(channel.Id)" @onclick="() => HandleTestAsync(channel.Id)">
+                                        @(IsTesting(channel.Id) ? "Testing…" : "Test")
+                                    </button>
+                                }
+                                @{
+                                    var testResult = GetTestResult(channel.Id);
+                                }
+                                @if (testResult is not null)
+                                {
+                                    <div class="@(testResult.Value.Success ? "text-success" : "text-danger")">@testResult.Value.Message</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (_isFormVisible)
+    {
+        <h3>@(_editingChannelId is null ? "Add channel" : "Edit channel")</h3>
+
+        <EditForm Model="_formViewModel" OnValidSubmit="HandleSubmitAsync">
+            <div class="mb-3">
+                <label class="form-label" for="channelName">Name</label>
+                <InputText id="channelName" class="form-control" @bind-Value="_formViewModel.Name" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="channelType">Type</label>
+                <InputSelect id="channelType" class="form-select" disabled="@(_editingChannelId is not null)" @bind-Value="_formViewModel.Type">
+                    <option value="@NotificationChannelType.Webhook">Webhook</option>
+                    <option value="@NotificationChannelType.Email">Email</option>
+                </InputSelect>
+                @if (_editingChannelId is not null)
+                {
+                    <p class="form-text field-hint">A channel's type cannot be changed after creation.</p>
+                }
+            </div>
+
+            <div class="form-check mb-3">
+                <InputCheckbox id="channelEnabled" class="form-check-input" @bind-Value="_formViewModel.Enabled" />
+                <label class="form-check-label" for="channelEnabled">Enabled</label>
+            </div>
+
+            @if (NotificationChannelViewModelFactory.ShowsWebhookFields(_formViewModel.Type))
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="channelUrl">URL</label>
+                    <InputText id="channelUrl" class="form-control" @bind-Value="_formViewModel.Url" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelHttpMethod">HTTP method</label>
+                    <InputText id="channelHttpMethod" class="form-control" @bind-Value="_formViewModel.HttpMethod" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelBodyTemplate">Body template</label>
+                    <InputTextArea id="channelBodyTemplate" class="form-control" rows="4" @bind-Value="_formViewModel.BodyTemplate" />
+                </div>
+            }
+
+            @if (NotificationChannelViewModelFactory.ShowsEmailFields(_formViewModel.Type))
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="channelSmtpHost">SMTP host</label>
+                    <InputText id="channelSmtpHost" class="form-control" @bind-Value="_formViewModel.SmtpHost" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelSmtpPort">SMTP port</label>
+                    <InputNumber id="channelSmtpPort" class="form-control" @bind-Value="_formViewModel.SmtpPort" />
+                </div>
+
+                <div class="form-check mb-3">
+                    <InputCheckbox id="channelUseSsl" class="form-check-input" @bind-Value="_formViewModel.UseSsl" />
+                    <label class="form-check-label" for="channelUseSsl">Use SSL</label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelUsername">Username</label>
+                    <InputText id="channelUsername" class="form-control" @bind-Value="_formViewModel.Username" />
+                </div>
+
+                @* Plain HTML input, not <InputText>: InputText hardcodes type="text", which cannot
+                   render a password field. *@
+                <div class="mb-3">
+                    <label class="form-label" for="channelPassword">Password (leave blank to keep the current value)</label>
+                    <input id="channelPassword" type="password" class="form-control" @bind="_formViewModel.Password" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelFromAddress">From address</label>
+                    <InputText id="channelFromAddress" class="form-control" @bind-Value="_formViewModel.FromAddress" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="channelToAddresses">To addresses</label>
+                    <InputText id="channelToAddresses" class="form-control" @bind-Value="_formViewModel.ToAddresses" />
+                    <p class="form-text field-hint">Separate multiple addresses with commas.</p>
+                </div>
+            }
+
+            <div class="form-check mb-2">
+                <InputCheckbox id="channelTriggerIpChange" class="form-check-input" @bind-Value="_formViewModel.TriggerOnIpChange" />
+                <label class="form-check-label" for="channelTriggerIpChange">Notify on IP change</label>
+            </div>
+
+            <div class="form-check mb-2">
+                <InputCheckbox id="channelTriggerFailure" class="form-check-input" @bind-Value="_formViewModel.TriggerOnFailure" />
+                <label class="form-check-label" for="channelTriggerFailure">Notify on failure</label>
+            </div>
+
+            <div class="form-check mb-3">
+                <InputCheckbox id="channelTriggerSuccess" class="form-check-input" @bind-Value="_formViewModel.TriggerOnSuccess" />
+                <label class="form-check-label" for="channelTriggerSuccess">Notify on success</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">Save</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="CancelForm">Cancel</button>
+        </EditForm>
+    }
+    else
+    {
+        <button type="button" class="btn btn-primary" @onclick="ShowAddForm">Add channel</button>
+    }
+}

@@ -1,0 +1,182 @@
+using Microsoft.EntityFrameworkCore;
+using StillHere.Application.Features.Domains;
+using StillHere.Infrastructure.Persistence.Entities;
+
+namespace StillHere.Infrastructure.Persistence.Repositories;
+
+internal sealed class ManagedDomainRepository(AppDbContext db) : IManagedDomainRepository
+{
+    public async Task<ManagedDomainDto> CreateAsync(
+        string domainName,
+        string host,
+        string providerKey,
+        string credentialName,
+        string encryptedSecretsJson,
+        int? pollingIntervalOverrideSeconds,
+        CancellationToken cancellationToken)
+    {
+        var credential = new DnsProviderCredential
+        {
+            ProviderKey = providerKey,
+            Name = credentialName,
+            EncryptedSecrets = encryptedSecretsJson,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+
+        var domain = new ManagedDomain
+        {
+            DomainName = domainName,
+            Host = host,
+            ProviderCredential = credential,
+            PollingIntervalOverrideSeconds = pollingIntervalOverrideSeconds,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+
+        db.ManagedDomains.Add(domain);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return ToDto(domain, providerKey);
+    }
+
+    public async Task<ManagedDomainDto?> FindByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+
+        return domain is null ? null : ToDto(domain, domain.ProviderCredential!.ProviderKey);
+    }
+
+    public async Task<ManagedDomainDto> UpdateAsync(
+        int id,
+        string domainName,
+        string host,
+        bool enabled,
+        int? pollingIntervalOverrideSeconds,
+        string? newEncryptedSecretsJson,
+        CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .FirstAsync(d => d.Id == id, cancellationToken);
+
+        domain.DomainName = domainName;
+        domain.Host = host;
+        domain.Enabled = enabled;
+        domain.PollingIntervalOverrideSeconds = pollingIntervalOverrideSeconds;
+
+        if (newEncryptedSecretsJson is not null)
+        {
+            domain.ProviderCredential!.EncryptedSecrets = newEncryptedSecretsJson;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return ToDto(domain, domain.ProviderCredential!.ProviderKey);
+    }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .FirstAsync(d => d.Id == id, cancellationToken);
+
+        db.ManagedDomains.Remove(domain);
+        db.DnsProviderCredentials.Remove(domain.ProviderCredential!);
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ManagedDomainScheduleSummaryDto>> ListEnabledSummariesAsync(CancellationToken cancellationToken) =>
+        await db.ManagedDomains.AsNoTracking()
+            .Where(d => d.Enabled)
+            .Select(d => new ManagedDomainScheduleSummaryDto(d.Id, d.PollingIntervalOverrideSeconds, d.LastCheckedAtUtc))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ManagedDomainSummaryDto>> ListDashboardSummariesAsync(CancellationToken cancellationToken)
+    {
+        var domains = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .AsNoTracking()
+            .OrderBy(d => d.DomainName)
+            .ToListAsync(cancellationToken);
+
+        return [.. domains.Select(ToSummaryDto)];
+    }
+
+    public async Task<ManagedDomainCheckDetailDto?> FindForCheckAsync(int id, CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains
+            .Include(d => d.ProviderCredential)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+
+        return domain is null
+            ? null
+            : new ManagedDomainCheckDetailDto(
+                domain.Id,
+                domain.DomainName,
+                domain.Host,
+                domain.ProviderCredential!.ProviderKey,
+                domain.ProviderCredential.EncryptedSecrets,
+                domain.LastKnownIp);
+    }
+
+    public async Task RecordCheckResultAsync(
+        int id,
+        DomainCheckOutcomeKind kind,
+        string? newLastKnownIp,
+        DateTime timestampUtc,
+        CancellationToken cancellationToken)
+    {
+        var domain = await db.ManagedDomains.FirstAsync(d => d.Id == id, cancellationToken);
+
+        domain.LastCheckedAtUtc = timestampUtc;
+        domain.LastStatus = kind switch
+        {
+            DomainCheckOutcomeKind.Unchanged => DomainCheckStatus.Unchanged,
+            DomainCheckOutcomeKind.Updated => DomainCheckStatus.Ok,
+            DomainCheckOutcomeKind.UpdateFailed => DomainCheckStatus.Failed,
+            DomainCheckOutcomeKind.DetectionFailed => DomainCheckStatus.Failed,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+        };
+
+        if (kind == DomainCheckOutcomeKind.Updated)
+        {
+            domain.LastKnownIp = newLastKnownIp;
+            domain.LastUpdatedAtUtc = timestampUtc;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static ManagedDomainDto ToDto(ManagedDomain domain, string providerKey) => new(
+        domain.Id,
+        domain.DomainName,
+        domain.Host,
+        providerKey,
+        domain.Enabled,
+        domain.PollingIntervalOverrideSeconds,
+        domain.CreatedAtUtc);
+
+    private static ManagedDomainSummaryDto ToSummaryDto(ManagedDomain domain) => new(
+        domain.Id,
+        domain.DomainName,
+        domain.Host,
+        domain.ProviderCredential!.ProviderKey,
+        domain.Enabled,
+        domain.PollingIntervalOverrideSeconds,
+        domain.LastKnownIp,
+        domain.LastCheckedAtUtc,
+        domain.LastUpdatedAtUtc,
+        ToApplicationStatus(domain.LastStatus));
+
+    private static ManagedDomainStatus ToApplicationStatus(DomainCheckStatus status) => status switch
+    {
+        DomainCheckStatus.Unknown => ManagedDomainStatus.Unknown,
+        DomainCheckStatus.Ok => ManagedDomainStatus.Ok,
+        DomainCheckStatus.Unchanged => ManagedDomainStatus.Unchanged,
+        DomainCheckStatus.Failed => ManagedDomainStatus.Failed,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+    };
+}

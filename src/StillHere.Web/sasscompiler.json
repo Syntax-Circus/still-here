@@ -1,0 +1,6 @@
+{
+  "Source": "wwwroot/scss",
+  "Target": "wwwroot/css",
+  "Arguments": "--style=expanded --quiet-deps",
+  "GenerateScopedCss": true
+}

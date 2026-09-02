@@ -1,0 +1,108 @@
+@page "/audit-log"
+@rendermode InteractiveServer
+@using StillHere.Application.Features.AuditLog
+
+<PageTitle>Audit log - still-here</PageTitle>
+
+<h1>Audit log</h1>
+
+<form class="row row-cols-lg-auto g-2 align-items-center mb-3" @onsubmit="HandleFilterSubmitAsync">
+    <div class="col-12">
+        <label class="visually-hidden" for="filterEventType">Event type</label>
+        <select id="filterEventType" class="form-select" @bind="_filterEventType">
+            <option value="">All event types</option>
+            <option value="@AuditEventKind.CheckOnly">Check only</option>
+            <option value="@AuditEventKind.IpChanged">IP changed</option>
+            <option value="@AuditEventKind.UpdateFailed">Update failed</option>
+            <option value="@AuditEventKind.UpdateSucceeded">Update succeeded</option>
+        </select>
+    </div>
+
+    <div class="col-12">
+        <label class="visually-hidden" for="filterSuccess">Success</label>
+        <select id="filterSuccess" class="form-select" @bind="_filterSuccessValue">
+            <option value="">Any result</option>
+            <option value="true">Success</option>
+            <option value="false">Failure</option>
+        </select>
+    </div>
+
+    <div class="col-12">
+        <label class="visually-hidden" for="filterFromDate">From</label>
+        <input id="filterFromDate" type="date" class="form-control" @bind="_filterFromDate" />
+    </div>
+
+    <div class="col-12">
+        <label class="visually-hidden" for="filterToDate">To</label>
+        <input id="filterToDate" type="date" class="form-control" @bind="_filterToDate" />
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </div>
+</form>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_isLoading)
+{
+    <p>Loading…</p>
+}
+else if (_rows.Count == 0)
+{
+    <p class="text-muted">No audit log entries match the current filters.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>Domain</th>
+                    <th>Event</th>
+                    <th>IP change</th>
+                    <th>Message</th>
+                    <th>Success</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr>
+                        <td>@row.TimestampUtc.ToString("u")</td>
+                        <td>
+                            @if (row.ManagedDomainId is int domainId)
+                            {
+                                <a href="@($"/domains/{domainId}/history")">@row.DomainName</a>
+                            }
+                            else
+                            {
+                                <text>—</text>
+                            }
+                        </td>
+                        <td>@row.EventType</td>
+                        <td>@row.IpDiffDisplay</td>
+                        <td>@row.Message</td>
+                        <td>@(row.Success ? "Yes" : "No")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Audit log pages">
+        <ul class="pagination">
+            <li class="page-item @(_hasPreviousPage ? "" : "disabled")">
+                <button class="page-link" type="button" disabled="@(!_hasPreviousPage)" @onclick="() => LoadPageAsync(_page - 1)">Previous</button>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Page @_page of @_totalPages</span></li>
+            <li class="page-item @(_hasNextPage ? "" : "disabled")">
+                <button class="page-link" type="button" disabled="@(!_hasNextPage)" @onclick="() => LoadPageAsync(_page + 1)">Next</button>
+            </li>
+        </ul>
+    </nav>
+}

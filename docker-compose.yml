@@ -1,0 +1,13 @@
+services:
+  still-here:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - stillhere-data:/data
+    restart: unless-stopped
+
+volumes:
+  stillhere-data:
