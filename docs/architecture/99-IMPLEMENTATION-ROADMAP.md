@@ -12,7 +12,7 @@ Ordered phase index, dependencies, and status. Implementation starts only when t
 | 6 | [PHASE-06-scheduler](PHASE-06-scheduler.md) | Phase 03, Phase 04, Phase 05 | Complete |
 | 7 | [PHASE-07-dashboard-audit-log](PHASE-07-dashboard-audit-log.md) | Phase 04, Phase 06 | Complete |
 | 8 | [PHASE-08-notifications](PHASE-08-notifications.md) | Phase 06 | Complete (code + tests; manual `/settings` UI verification still pending — see phase doc) |
-| 9 | [PHASE-09-polish](PHASE-09-polish.md) | Phase 07, Phase 08 | Not started |
+| 9 | [PHASE-09-polish](PHASE-09-polish.md) | Phase 07, Phase 08 | Complete |
 
 Phase 03 (provider abstraction) and Phase 05 (IP detection) can proceed in parallel after Phase 01 — both depend only on foundation, not on each other or on auth.
 
