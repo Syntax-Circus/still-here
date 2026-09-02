@@ -42,55 +42,55 @@ Follow [Razor Component Architecture](../RAZOR_COMPONENT_ARCHITECTURE.md).
 
 ## Deliverables
 
-- [ ] Notification channel CRUD in `/settings`.
-- [ ] `WebhookNotificationSender` (templated JSON body, configurable HTTP method).
-- [ ] `EmailNotificationSender` (SMTP, per-channel config).
-- [ ] Fan-out wired into `RunScheduledDomainCheckHandler`/`RunManualDomainCheckRequestHandler` (Phase 06) on `IpChanged`/`UpdateFailed`/`UpdateSucceeded`, filtered by each channel's trigger flags.
-- [ ] Test-send action per channel.
+- [x] Notification channel CRUD in `/settings`.
+- [x] `WebhookNotificationSender` (templated JSON body, configurable HTTP method).
+- [x] `EmailNotificationSender` (SMTP, per-channel config).
+- [x] Fan-out wired into `RunScheduledDomainCheckHandler`/`RunManualDomainCheckRequestHandler` (Phase 06) on `IpChanged`/`UpdateFailed`/`UpdateSucceeded`, filtered by each channel's trigger flags.
+- [x] Test-send action per channel.
 
 ## Actionable Tasks
 
-- [ ] **P08-01** Implement notification channel CRUD handlers and the `/settings` notifications section.
+- [x] **P08-01** Implement notification channel CRUD handlers and the `/settings` notifications section.
   - **Depends on:** Phase 02 (auth)
   - **Validation:** Handler tests cover validation and not-found branches.
-- [ ] **P08-02** Implement `WebhookNotificationSender` with template placeholder substitution.
+- [x] **P08-02** Implement `WebhookNotificationSender` with template placeholder substitution.
   - **Depends on:** P08-01
   - **Validation:** Unit test confirms placeholders (`{domain}`, `{oldIp}`, `{newIp}`, `{status}`, `{message}`) substitute correctly.
-- [ ] **P08-03** Implement `EmailNotificationSender` via `SyntaxCircus.Email`.
+- [x] **P08-03** Implement `EmailNotificationSender` via `SyntaxCircus.Email`.
   - **Depends on:** P08-01
   - **Validation:** Unit test with a substituted SMTP client/sender.
-- [ ] **P08-04** Wire `INotificationDispatcher` fan-out into the Phase 06 handler, filtered by trigger flags; log send failures to the app log only.
+- [x] **P08-04** Wire `INotificationDispatcher` fan-out into the Phase 06 handler, filtered by trigger flags; log send failures to the app log only.
   - **Depends on:** P08-02, P08-03, Phase 06
   - **Validation:** Integration test confirms a failed webhook send does not write to the audit log, only the app log.
-- [ ] **P08-05** Implement test-send action.
+- [x] **P08-05** Implement test-send action.
   - **Depends on:** P08-02, P08-03
-  - **Validation:** Manual verification — test-send shows success/failure inline.
+  - **Validation:** Manual verification — test-send shows success/failure inline. **Not yet performed** (see Success Criteria note below).
 
 ## Success Criteria
 
-- [ ] `dotnet test` passes for all notification handler/sender tests.
-- [ ] Manual verification: configure a webhook channel, trigger a simulated IP change, confirm the webhook fires with correctly substituted content.
+- [x] `dotnet test` passes for all notification handler/sender tests. (205/205 across all four test projects, including a dedicated integration test proving FR-22's audit-log isolation.)
+- [ ] Manual verification: configure a webhook channel, trigger a simulated IP change, confirm the webhook fires with correctly substituted content. **Not performed.** The implementation session's sandbox could not run `dotnet run --project src\StillHere.Web` to completion (the SASS/npm toolchain hung indefinitely, an environment-specific limitation — see `.superpowers/sdd/plan-phase-08-dazzling-lerdorf/progress.md` for details); two implementer subagents *did* successfully start the app and curl-verify `/settings` loads with no DI errors, but no one performed the full interactive click-through (add/edit/delete both channel types, password change, test-send success/failure, live webhook delivery). **A human with a working browser/dev environment should do this pass before considering the phase fully done.**
 
 ## Boundary Validation
 
-- [ ] Application use-case entry points delegate to the named handlers listed above.
-- [ ] Framework-owned operational or static exemptions execute no application workflow.
-- [ ] Handler constructor dependencies contain only approved abstractions.
-- [ ] Persistence and integration entities do not cross infrastructure boundaries.
-- [ ] Cancellation reaches asynchronous handler dependencies.
-- [ ] Expected outcomes and transport mapping have focused tests.
-- [ ] Infrastructure implementations have integration coverage where applicable.
-- [ ] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback.
-- [ ] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind.
-- [ ] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel.
-- [ ] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies.
-- [ ] API request and response contracts use DTO names and contracts, never Razor ViewModels.
-- [ ] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values.
-- [ ] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
+- [x] Application use-case entry points delegate to the named handlers listed above.
+- [x] Framework-owned operational or static exemptions execute no application workflow.
+- [x] Handler constructor dependencies contain only approved abstractions.
+- [x] Persistence and integration entities do not cross infrastructure boundaries.
+- [x] Cancellation reaches asynchronous handler dependencies.
+- [x] Expected outcomes and transport mapping have focused tests.
+- [x] Infrastructure implementations have integration coverage where applicable.
+- [x] Inline Razor components contain only simple parameters and, at most, one trivial synchronous `EventCallback`-forwarding callback.
+- [x] Every component beyond the inline ceiling uses paired `.razor` and `.razor.cs` files, with all C# in code-behind.
+- [x] Each Razor ViewModel is feature-local and presentation-only; the recorded direct-model decision does not expose an API ViewModel.
+- [x] A factory or presentation service is used only for non-trivial mapping, asynchronous assembly, or multiple dependencies.
+- [x] API request and response contracts use DTO names and contracts, never Razor ViewModels.
+- [x] Repeated or business-meaningful literals are named constants at the right scope, not bare magic values.
+- [x] Duplicated-looking logic across flows was evaluated for genuine divergence before extracting (or intentionally not extracting) a shared abstraction.
 
 ## Risks and Open Questions
 
-- [ ] None specific to this phase.
+- [x] None specific to this phase.
 
 ## Handoff
 
