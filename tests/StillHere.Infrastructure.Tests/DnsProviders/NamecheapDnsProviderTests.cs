@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Polly.CircuitBreaker;
 using Shouldly;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Infrastructure.DnsProviders;
@@ -139,6 +140,28 @@ public sealed class NamecheapDnsProviderTests
         var result = await provider.UpdateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         result.Success.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RequestTimesOut_ReturnsFailure()
+    {
+        var handler = new StubHttpMessageHandler(_ => throw new TaskCanceledException("simulated timeout", new TimeoutException()));
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("timed out");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CircuitOpen_ReturnsFailure()
+    {
+        var handler = new StubHttpMessageHandler(_ => throw new BrokenCircuitException());
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("temporarily unavailable");
     }
 
     private static NamecheapDnsProvider CreateProvider(HttpMessageHandler handler)

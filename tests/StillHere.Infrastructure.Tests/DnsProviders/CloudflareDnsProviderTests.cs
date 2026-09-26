@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 using Shouldly;
 using StillHere.Application.Features.DnsProviders;
 using StillHere.Infrastructure.DnsProviders;
@@ -139,7 +141,7 @@ public sealed class CloudflareDnsProviderTests
     [Fact]
     public async Task UpdateAsync_NetworkFailure_ReturnsFailure()
     {
-        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, throwOnSend: true);
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, sendException: new HttpRequestException("simulated network failure"));
 
         var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
 
@@ -149,12 +151,70 @@ public sealed class CloudflareDnsProviderTests
     [Fact]
     public async Task UpdateAsync_RequestTimesOut_ReturnsFailure()
     {
-        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, timeoutOnSend: true);
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, sendException: new TaskCanceledException("simulated timeout", new TimeoutException()));
 
         var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
 
         result.Success.ShouldBeFalse();
         result.Message.ShouldContain("timed out");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CircuitOpen_ReturnsFailure()
+    {
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, sendException: new BrokenCircuitException());
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("temporarily unavailable");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PipelineTimeout_ReturnsFailure()
+    {
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, sendException: new TimeoutRejectedException("simulated"));
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("timed out");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CallerCancellation_Propagates()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, sendException: new OperationCanceledException(cts.Token));
+
+        await Should.ThrowAsync<OperationCanceledException>(() => CreateProvider(handler).UpdateAsync(CreateRequest(), cts.Token));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MultipleZonesMatch_ReturnsFailureWithoutQueryingRecords()
+    {
+        const string twoZones = """{"success":true,"errors":[],"result":[{"id":"zone1"},{"id":"zone2"}]}""";
+        var handler = new RoutingHandler(zones: twoZones, records: RecordsJson("9.9.9.9"), patch: PatchOkJson);
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("multiple zones");
+        handler.Requests.ShouldNotContain(r => r.PathAndQuery.Contains("/dns_records"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MultipleARecordsMatch_ReturnsFailureWithoutPatching()
+    {
+        const string twoRecords = """{"success":true,"errors":[],"result":[{"id":"rec1","content":"9.9.9.9"},{"id":"rec2","content":"8.8.8.8"}]}""";
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: twoRecords, patch: PatchOkJson);
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("2 A records");
+        handler.Requests.ShouldNotContain(r => r.Method == HttpMethod.Patch);
     }
 
     [Fact]
@@ -188,21 +248,15 @@ public sealed class CloudflareDnsProviderTests
         string patch,
         HttpStatusCode zonesStatus = HttpStatusCode.OK,
         HttpStatusCode patchStatus = HttpStatusCode.OK,
-        bool throwOnSend = false,
-        bool timeoutOnSend = false) : HttpMessageHandler
+        Exception? sendException = null) : HttpMessageHandler
     {
         public List<CapturedRequest> Requests { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (throwOnSend)
+            if (sendException is not null)
             {
-                throw new HttpRequestException("simulated network failure");
-            }
-
-            if (timeoutOnSend)
-            {
-                throw new TaskCanceledException("simulated timeout", new TimeoutException());
+                throw sendException;
             }
 
             var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);

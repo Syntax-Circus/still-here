@@ -47,9 +47,9 @@ internal sealed class NamecheapDnsProvider(HttpClient httpClient) : IDnsProvider
         {
             response = await httpClient.GetAsync(query, cancellationToken);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (DnsProviderTransportFailure.TryCreate(ex, "Namecheap", cancellationToken, out var failure))
         {
-            return DnsUpdateResult.Failed($"Namecheap request failed: {ex.Message}");
+            return failure;
         }
 
         var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
