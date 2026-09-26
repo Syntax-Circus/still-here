@@ -63,6 +63,20 @@ public static class DependencyInjection
                 Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
             .AddTypedClient<IDnsProvider, NamecheapDnsProvider>();
 
+        services.AddResilientHttpClient(
+            "cloudflare-ddns",
+            client =>
+            {
+                client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
+                client.Timeout = CloudflareDnsProvider.HttpTimeout;
+            },
+            retryCount: CloudflareDnsProvider.MaxRetryAttempts,
+            onRetry: (name, attempt, statusCode) =>
+                Log.Warning("HTTP retry {Attempt} for {Client} ({StatusCode})", attempt, name, statusCode),
+            onBreak: (name, statusCode) =>
+                Log.Warning("Circuit opened for {Client} ({StatusCode})", name, statusCode))
+            .AddTypedClient<IDnsProvider, CloudflareDnsProvider>();
+
         services.AddSingleton<IpDetectionCache>();
         services.AddScoped<IIpDetectionService, IpDetectionService>();
 
