@@ -147,6 +147,17 @@ public sealed class CloudflareDnsProviderTests
     }
 
     [Fact]
+    public async Task UpdateAsync_RequestTimesOut_ReturnsFailure()
+    {
+        var handler = new RoutingHandler(zones: ZoneFoundJson, records: NoRecordsJson, patch: PatchOkJson, timeoutOnSend: true);
+
+        var result = await CreateProvider(handler).UpdateAsync(CreateRequest(), CancellationToken.None);
+
+        result.Success.ShouldBeFalse();
+        result.Message.ShouldContain("timed out");
+    }
+
+    [Fact]
     public async Task UpdateAsync_SendsBearerAuthorizationHeader()
     {
         var handler = new RoutingHandler(zones: ZoneFoundJson, records: RecordsJson("1.2.3.4"), patch: PatchOkJson);
@@ -177,7 +188,8 @@ public sealed class CloudflareDnsProviderTests
         string patch,
         HttpStatusCode zonesStatus = HttpStatusCode.OK,
         HttpStatusCode patchStatus = HttpStatusCode.OK,
-        bool throwOnSend = false) : HttpMessageHandler
+        bool throwOnSend = false,
+        bool timeoutOnSend = false) : HttpMessageHandler
     {
         public List<CapturedRequest> Requests { get; } = [];
 
@@ -186,6 +198,11 @@ public sealed class CloudflareDnsProviderTests
             if (throwOnSend)
             {
                 throw new HttpRequestException("simulated network failure");
+            }
+
+            if (timeoutOnSend)
+            {
+                throw new TaskCanceledException("simulated timeout", new TimeoutException());
             }
 
             var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);

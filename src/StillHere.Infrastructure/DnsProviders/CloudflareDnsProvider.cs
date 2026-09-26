@@ -94,6 +94,11 @@ internal sealed class CloudflareDnsProvider(HttpClient httpClient) : IDnsProvide
         {
             return DnsUpdateResult.Failed($"Cloudflare request failed: {ex.Message}");
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient.Timeout surfaces as a cancellation the caller never requested.
+            return DnsUpdateResult.Failed("Cloudflare request timed out.");
+        }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
         {
             return DnsUpdateResult.Failed($"Could not parse Cloudflare response: {ex.Message}");
