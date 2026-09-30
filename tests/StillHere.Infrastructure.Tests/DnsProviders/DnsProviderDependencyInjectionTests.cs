@@ -32,4 +32,27 @@ public sealed class DnsProviderDependencyInjectionTests
         namecheap.DisplayName.ShouldBe("Namecheap");
         registry.Providers.ShouldContain(p => p.ProviderKey == "namecheap");
     }
+
+    [Fact]
+    public void AddInfrastructureAndAddApplication_ResolvesCloudflareProviderByKey()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:Default"] = "Data Source=:memory:",
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddInfrastructure(configuration);
+        services.AddApplication();
+
+        using var provider = services.BuildServiceProvider();
+        var registry = provider.GetRequiredService<IDnsProviderRegistry>();
+
+        var cloudflare = registry.GetByKey("cloudflare");
+
+        cloudflare.DisplayName.ShouldBe("Cloudflare");
+        cloudflare.CredentialFields.ShouldContain(f => f.Key == "ApiToken" && f.IsSecret);
+    }
 }
